@@ -34,6 +34,7 @@ namespace MixTok.Core
         public bool Online;
         public int UserId;
         public string ChannelLogo;
+        public bool VodsEnabled;
         public MixerUser User;
 
         [JsonProperty("languageId")]
@@ -41,6 +42,8 @@ namespace MixTok.Core
 
         [JsonProperty("token")]
         public string Name;
+
+        public List<MixerClip> Clips = new List<MixerClip>();
     }
 
     public class ClipContent
@@ -72,7 +75,7 @@ namespace MixTok.Core
             {
                 try
                 {
-                    string response = await MakeMixerHttpRequest($"api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent,online,userId,user,languageId");
+                    string response = await MakeMixerHttpRequest($"api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent,online,userId,user,languageId,vodsEnabled");
                     List<MixerChannel> chan = JsonConvert.DeserializeObject<List<MixerChannel>>(response);
                     channels.AddRange(chan);
 

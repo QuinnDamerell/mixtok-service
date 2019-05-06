@@ -13,9 +13,10 @@ namespace MixTok.Controllers
     {
         // GET api/getclips
         [HttpGet]
-        public ActionResult<List<TokClip>> Get()
+        public ActionResult<List<string>> Get()
         {
-            return Program.Mon.GetClips(500);
+            return null;
+            //return Program.Mon.GetClips(500);
         }
 
         // GET api/values/5
