@@ -15,7 +15,7 @@ namespace MixTok.Controllers
     {
         // GET: api/v1/ClipMine
         [HttpGet]
-        public async Task<IActionResult> Get(int sortType, int? limit, string fromTime, string toTime, int? viewCoutMin, int? channelId, string channelName, bool? currentlyLive, bool partnered, string gameTitle, int? gameId, int? hypeZoneChannelId)
+        public async Task<IActionResult> Get(int sortType, int? limit, string fromTime, string toTime, int? viewCoutMin, int? channelId, string channelName, bool? currentlyLive, bool? partnered, string gameTitle, int? gameId, int? hypeZoneChannelId)
         {
             DateTime start = DateTime.Now;
 
