@@ -7,173 +7,277 @@ namespace MixTok.Core
 {
     public interface IClipMineAdder
     {
-        void AddToClipMine(List<MixerChannel> newClips);
+        void AddToClipMine(List<MixerClip> newClips);
+    }
+
+    public enum ClipMineSortTypes
+    {
+        ViewCount = 0,
+        MixTokRank = 1,
     }
 
     public class ClipMine : IClipMineAdder
     {
         ClipCrawler m_crawler;
-        Dictionary<int, MixerChannel> m_channelMine = new Dictionary<int, MixerChannel>();
+        Dictionary<string, MixerClip> m_clipMine = new Dictionary<string, MixerClip>();
+        List<MixerClip> m_viewCountSortedList = new List<MixerClip>();
+        List<MixerClip> m_mixTockSortedList = new List<MixerClip>();
 
         public ClipMine()
         {
             m_crawler = new ClipCrawler(this);
         }
 
-        public void AddToClipMine(List<MixerChannel> newChannels)
+        public void AddToClipMine(List<MixerClip> newClips)
         {
-            //
-            // Add the new clips to the mine.
-            //
-            int newChannelCount = 0;
-            int newClipCount = 0;
-            // Add the clips to channel mine
-            foreach(MixerChannel chan in newChannels)
+            // Lock the dictionary so we make sure no one reads or writes while we are updating.
+            lock(m_clipMine)
             {
-                if(m_channelMine.ContainsKey(chan.Id))
+                // Set all channels to offline and remove old clips.
+                OfflineAndCleanUpClipMine();
+
+                // Add all of the new clips.
+                AddOrUpdateClips(newClips);
+
+                // Update
+                UpdateCookedData();
+            }
+        }
+
+        // Needs to be called under lock!
+        private void OfflineAndCleanUpClipMine()
+        {
+            List<string> toRemove = new List<string>();
+            foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
+            {
+                // Set the channel offline and the view count to 0.
+                // When the currently online channel are added these will be
+                // updated to the current values.
+                p.Value.Channel.Online = false;
+                p.Value.Channel.ViewersCurrent = 0;
+
+                // If the clips is expired, remove it.
+                if(DateTime.UtcNow > p.Value.ExpirationDate)
                 {
-                    // The channel already exists.
-                    // Update the channel data
+                    toRemove.Add(p.Key);
+                }
+            }
 
-                    // Update or add clip data
+            // Remove old clips
+            foreach(string s in toRemove)
+            {
+                m_clipMine.Remove(s);
+            }
 
+            Logger.Info($"Mine cleanup done, removed {toRemove.Count} old clips.");
+        }
+
+        // Needs to be called under lock!
+        private void AddOrUpdateClips(List<MixerClip> freshClips)
+        {
+            int added = 0;
+            int updated = 0;
+            foreach(MixerClip c in freshClips)
+            {
+                if(m_clipMine.ContainsKey(c.ContentId))
+                {
+                    // The clips already exists, update the clip and channel info
+                    // from this newer data.
+                    m_clipMine[c.ContentId].UpdateFromNewer(c);
+                    updated++;
                 }
                 else
                 {
-                    // New channel!
-                    m_channelMine.Add(chan.Id, chan);
-                    newChannelCount++;
-                    newClipCount = chan.Clips.Count;
+                    // The clip doesn't exist, add it.
+                    m_clipMine.Add(c.ContentId, c);
+                    added++;
                 }
             }
-            Logger.Info($"{newChannelCount} channels added to the mine and {newClipCount} new clips found!");
+            Logger.Info($"Clip update done; {added} added, {updated} updated.");
+        }
+         
+        // Needs to be called under lock!
+        private void UpdateCookedData()
+        {
+            DateTime start = DateTime.Now;
 
-            // 
-            // Cleanup old data
-            //
+            // Update the mixtock rank on all the clips we know of.
+            // We do this for all clips since it effects offline channels.
+            UpdateMixTokRanks();
 
-            // 
-            // Cook the data
-            //
+            // Update the view count sorted list.
+            lock (m_viewCountSortedList)
+            {
+                // To update the list, delete everything we had and rebuild it
+                // based on the new mine.
+                m_viewCountSortedList.Clear();
+                foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
+                {
+                    InsertSort(ref m_viewCountSortedList, p.Value, true);
+                }
+            }    
 
+            // Update the mixtok rank sorted list.
+            lock (m_mixTockSortedList)
+            {
+                // To update the list, delete everything we had and rebuild it
+                // based on the new mine.
+                m_mixTockSortedList.Clear();
+                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
+                {
+                    InsertSort(ref m_mixTockSortedList, p.Value, false);
+                }
+            }
 
-
-
+            Logger.Info($"Cooking data done: {DateTime.Now - start}");
         }
 
-        //public class TokClip
-        //{
-        //    public double Rank;
-        //    public MixerChannel Channel;
+        private void InsertSort(ref List<MixerClip> list, MixerClip c, bool useViewCount)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                bool result = useViewCount ? (c.ViewCount > list[i].ViewCount) : (c.MixTokRank > list[i].MixTokRank);
+                if (result)
+                {
+                    list.Insert(i, c);
+                    return;
+                }
+            }
+            list.Add(c);
+        }
 
-        //    public int Views;
-        //    public int TypeId;
-        //    public string Title;
-        //    public string ClipUrl;
-        //    public string ContentId;
-        //    public DateTime Created;
-        //    public string ShareableUrl;
-        //}
+        public List<MixerClip> GetClips(ClipMineSortTypes sortType,
+            int limit = 100,
+            DateTime? fromTime = null, DateTime? toTime = null,    
+            int? viewCoutMin = null,
+            int? channelIdFilter = null, int? hypeZoneChannelId = null,
+            bool? currentlyLive = null, bool? partnered = null,
+            string gameTitle = null, int? gameId = null)
+        {
+            // Get the pre-sorted list we want.
+            List<MixerClip> list;
+            switch(sortType)
+            {
+                default:
+                case ClipMineSortTypes.ViewCount:
+                    list = m_viewCountSortedList;
+                    break;
+                case ClipMineSortTypes.MixTokRank:
+                    list = m_mixTockSortedList;
+                    break;
+            }
 
-        //                            // Convert them into clips
-        //                    foreach (var res in results)
-        //                    {
-        //                        string clipUrl = null;
-        //                        foreach(var con in res.ContentLocators)
-        //                        {
-        //                            if(con.LocatorType.Equals("HlsStreaming"))
-        //                            {
-        //                                clipUrl = con.Uri;
-        //                                break;
-        //                            }
-        //}
+            List<MixerClip> output = new List<MixerClip>();
+            // Lock the list so it doesn't change while we are using it.
+            lock(list)
+            {
+                // Go through the current sorted list from the highest to the lowest.
+                // Apply the filtering and then build the output list.
+                int currentListPos = 0;
+                while(output.Count < limit && currentListPos < list.Count)
+                {
+                    bool addToOutput = true;
+                    MixerClip c = list[currentListPos];
+                    currentListPos++;
 
-        //                        if(String.IsNullOrWhiteSpace(clipUrl))
-        //                        {
-        //                            continue;
-        //                        }
+                    if (channelIdFilter.HasValue)
+                    {
+                        // Check if this is the channel we want.
+                        if (c.Channel.Id != channelIdFilter.Value)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(!String.IsNullOrWhiteSpace(gameTitle))
+                    {
+                        // Check if the game title has the current filter string.
+                        if(c.GameTitle.IndexOf(gameTitle, 0, StringComparison.InvariantCultureIgnoreCase) == -1)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(fromTime.HasValue)
+                    {
+                        // Check if this is in the time range we want.
+                        if(c.UploadDate < fromTime.Value)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if (toTime.HasValue)
+                    {
+                        // Check if this is in the time range we want.
+                        if (c.UploadDate > toTime.Value)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(viewCoutMin.HasValue)
+                    {
+                        if(c.ViewCount < viewCoutMin)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(partnered.HasValue)
+                    {
+                        if(partnered.Value != c.Channel.Partnered)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(currentlyLive.HasValue)
+                    {
+                        if(currentlyLive.Value != c.Channel.Online)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(hypeZoneChannelId.HasValue)
+                    {
+                        if(hypeZoneChannelId.Value != c.HypeZoneChannelId)
+                        {
+                            addToOutput = false;
+                        }
+                    }
 
-        //                        clips.Add(new TokClip()
-        //{
-        //    TypeId = res.TypeId,
-        //                            Title = res.Title,
-        //                            ContentId = res.ContentId,
-        //                            ShareableUrl = $"https://mixer.com/{chan.Id}?clip={res.ShareableId}",
-        //                            Channel = chan,
-        //                            Created = res.UploadDate,
-        //                            Views = res.ViewCount,
-        //                            ClipUrl = clipUrl
-        //                        });
+                    // Add if if we want.
+                    if (addToOutput)
+                    {
+                        output.Add(c);
+                    }
+                }
+            }
+            return output;
+        }
+                     
+        private void UpdateMixTokRanks()
+        {
+            // The min age a clip can be.
+            TimeSpan s_minClipAge = new TimeSpan(0, 10, 0);
 
-        //TimeSpan c_maxClipAge = new TimeSpan(168, 0, 0); // 7 days.
+            // For each clip, update the rank
+            DateTime nowUtc = DateTime.UtcNow;
+            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
+            {
+                MixerClip clip = p.Value;
 
-        //public List<TokClip> GetClips(int limit = 100)
-        //{
-        //    lock (m_lock)
-        //    {
-        //        int l = m_topClips.Count > limit ? limit : m_topClips.Count;
-        //        return m_topClips.GetRange(0, l);
-        //    }
-        //}
+                // Compute the view rank
+                double viewRank = (double)clip.ViewCount;
 
+                // Decay the view rank by time
+                TimeSpan age = (nowUtc - clip.UploadDate);
 
-        //private List<TokClip> RankClips(List<TokClip> input)
-        //{
-        //    // Get the max view count.
-        //    int viewCountAccum = 0;
-        //    int maxViewCount = 0;
-        //    foreach (var clip in input)
-        //    {
-        //        viewCountAccum += clip.Views;
-        //        if (maxViewCount < clip.Views)
-        //        {
-        //            maxViewCount = clip.Views;
-        //        }
-        //    }
-        //    double avgViewCount = (double)viewCountAccum / (double)input.Count;
+                // Clamp by the min age to give all clips some time
+                // to pick up viewers.
+                if(age < s_minClipAge)
+                {
+                    age = s_minClipAge;
+                }
+                double decayedRank = viewRank / (age.TotalDays * 2);
 
-        //    List<TokClip> output = new List<TokClip>();
-        //    DateTime start = DateTime.Now;
-        //    foreach (var clip in input)
-        //    {
-        //        // Compute a rank for this clip.
-        //        double viewRank = (double)clip.Views / (double)(100);
-        //        TimeSpan age = c_maxClipAge - (start - clip.Created);
-        //        double timeRank = (double)(age.TotalSeconds) / (c_maxClipAge.TotalSeconds);
-        //        if (timeRank < 0)
-        //        {
-        //            timeRank = 0;
-        //        }
-
-        //        viewRank = Math.Clamp(viewRank, 0.0, 1.0);
-        //        viewRank = viewRank / 2;
-        //        timeRank = timeRank / 2;
-
-        //        viewRank = Math.Pow(viewRank, 1.8);
-        //        timeRank = Math.Pow(timeRank, 1.2);
-
-        //        // Compute the rank
-        //        clip.Rank = Math.Clamp(viewRank + timeRank, 0.0, 1.0);
-
-        //        // Add the clip to the output
-        //        InsertSort(ref output, clip);
-        //    }
-
-        //    return output;
-        //}
-
-        //private void InsertSort(ref List<TokClip> list, TokClip c)
-        //{
-        //    for (int i = 0; i < list.Count; i++)
-        //    {
-        //        if (c.Rank > list[i].Rank)
-        //        {
-        //            list.Insert(i, c);
-        //            return;
-        //        }
-        //    }
-        //    list.Add(c);
-        //}
-
+                clip.MixTokRank = decayedRank;
+            }
+        }
     }
 }

@@ -8,12 +8,15 @@ namespace MixTok.Core
 {
     public class ClipCrawler
     {
+        static int s_MinViewerCount = 20;
+
         IClipMineAdder m_adder;
         Thread m_updater;
 
 
         public ClipCrawler(IClipMineAdder adder)
         {
+            m_adder = adder;
             m_updater = new Thread(UpdateThread);
             m_updater.Start();
         }
@@ -25,8 +28,8 @@ namespace MixTok.Core
                 try
                 {
                     // Update
-                    List<MixerChannel> channels = await GetTockClips();
-                    m_adder.AddToClipMine(channels);
+                    List<MixerClip> clips = await GetTockClips();
+                    m_adder.AddToClipMine(clips);
                 }
                 catch(Exception e)
                 {
@@ -39,23 +42,34 @@ namespace MixTok.Core
             }
         }
      
-        private async Task<List<MixerChannel>> GetTockClips()
+        private async Task<List<MixerClip>> GetTockClips()
         {
             // Get the online channels
             DateTime start = DateTime.Now;
 
             // We must limit how many channels we pull, so we will only get channels with at least 2 viewers.
-            List<MixerChannel> channels = await MixerApis.GetOnlineChannels(2, null);
+            List<MixerChannel> channels = await MixerApis.GetOnlineChannels(s_MinViewerCount, null);
             Logger.Info($"Found {channels.Count} online channels in {(DateTime.Now - start)}");
 
             // Get the clips for the channels
+            List<MixerClip> clips = new List<MixerClip>();
             start = DateTime.Now;
             int count = 0;
             foreach (var chan in channels)
             {
                 try
                 {
-                    chan.Clips = await MixerApis.GetClips(chan.Id);                    
+                    // Get the clips for this channel.
+                    List<MixerClip>  channelClips = await MixerApis.GetClips(chan.Id);
+
+                    // For each clip, attach the most recent channel object.
+                    foreach(MixerClip c in channelClips)
+                    {
+                        c.Channel = chan;
+                    }
+
+                    // Add the clips to our output list.
+                    clips.AddRange(channelClips);                   
                 }
                 catch (Exception e)
                 {
@@ -70,7 +84,7 @@ namespace MixTok.Core
             }
 
             Logger.Info($"Found {count} clips in {(DateTime.Now - start)}");
-            return channels;
+            return clips;
         }
     }
 }
