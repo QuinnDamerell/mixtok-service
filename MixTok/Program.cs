@@ -13,11 +13,11 @@ namespace MixTok
 {
     public class Program
     {
-        public static Monitor Mon;
+        public static ClipMine s_ClipMine;
 
         public static void Main(string[] args)
         {
-            Mon = new Monitor();
+            s_ClipMine = new ClipMine();
             CreateWebHostBuilder(args).Build().Run();
         }
 
