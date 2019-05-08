@@ -15,7 +15,7 @@ namespace MixTok.Controllers
     {
         // GET: api/v1/ClipMine
         [HttpGet]
-        public async Task<IActionResult> Get(int sortType, int? limit, string fromTime, string toTime, int? viewCoutMin, int? channelId, string channelName, bool? currentlyLive, bool? partnered, string gameTitle, int? gameId, int? hypeZoneChannelId)
+        public async Task<IActionResult> Get(int sortType, int? limit, string fromTime, string toTime, int? viewCoutMin, int? channelId, string channelName, bool? currentlyLive, bool? partnered, string gameTitle, int? gameId, int? hypeZoneChannelId, string languageFilter)
         {
             DateTime start = DateTime.Now;
 
@@ -68,7 +68,7 @@ namespace MixTok.Controllers
             }
 
             // Get the results.
-            var list = Program.s_ClipMine.GetClips(sort, l, from, to, viewCoutMin, channelId, hypeZoneChannelId, currentlyLive, partnered, gameTitle, gameId);
+            var list = Program.s_ClipMine.GetClips(sort, l, from, to, viewCoutMin, channelId, hypeZoneChannelId, currentlyLive, partnered, gameTitle, gameId, languageFilter);
             Logger.Info($"ClipMine call took {DateTime.Now - start}");
             return Ok(list);
         }  

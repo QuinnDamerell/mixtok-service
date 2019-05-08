@@ -28,8 +28,9 @@ namespace MixTok.Core
                 try
                 {
                     // Update
+                    DateTime start = DateTime.Now;
                     List<MixerClip> clips = await GetTockClips();
-                    m_adder.AddToClipMine(clips);
+                    m_adder.AddToClipMine(clips, DateTime.Now - start);
                 }
                 catch(Exception e)
                 {

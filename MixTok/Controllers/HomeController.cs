@@ -15,23 +15,35 @@ namespace MixTok.Controllers
         [HttpGet]
         public ContentResult Get()
         {
+            string output = string.Copy(c_html);
+            var tup = Program.s_ClipMine.GetChannelCount();
+            output = output.Replace("{channel}", tup.Item1 + String.Empty);
+            output = output.Replace("{onlineChannels}", tup.Item2 + String.Empty);
+            output = output.Replace("{clips}", Program.s_ClipMine.GetClipsCount() + String.Empty);
+            output = output.Replace("{lastUpdate}", (DateTime.Now - Program.s_ClipMine.GetLastUpdateTime()).ToString() + String.Empty);
+            output = output.Replace("{lastUpdateDuration}", Program.s_ClipMine.GetLastUpdateDuration().ToString());
+
             return new ContentResult
             {
                 ContentType = "text/html",
                 StatusCode = (int)HttpStatusCode.OK,
-                Content = c_html
+                Content = output
             };
         }
 
-        static string c_html = @"
+        const string c_html = @"
 <html>
    <body>
       <h1>MixTok - ClipMine</h1>
-      <a href=""api/v1/ClipMine""><h2>api/v1/ClipMine</h2 ></a>
-      This API allows access to all clips on mixer.The caller can select any set of filters to apply to the returned results.
+      <h3>Current Index: {channel} Channels, {onlineChannels} Online Channels, {clips} Clips</h3>
+      </h2>Last Updated {lastUpdate} Ago, Last Update Duration {lastUpdateDuration}</h2>
+      <br/>
+      <br/>
+      <h3>API: <a href=""api/v1/ClipMine"">api/v1/ClipMine</a></h3>
+      This API allows access to all clips currently on mixer. The caller can select any set of filters to apply to the returned results.
       <br />
       <br />
-      All filters can be applied as get parameters to the REST API.
+      All filters can be applied as URL get parameters to the REST API.
       <br />
       Any subset of filters can be applied together.
       <br />
@@ -44,48 +56,51 @@ namespace MixTok.Controllers
       MixTok Rank Sorted, only live channels, no more than an hour old
       <br /><a href=""api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h"">api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h</a>
       <h3 > Filters </h3 >
-      <strong > SortType </strong > -int: [0 or 1](default 0) - The order in which results are sorted.
+      <strong > SortType </strong > - int: [0 or 1](default 0) - The order in which results are sorted.
       <br /> 0 - ViewCount
       <br /> 1 - MixTokRank
       <br />
       <br />
-      <strong > Limit </strong > -int(default 100) - The max number of results to be sent back.
+      <strong > Limit </strong > - int(default 100) - The max number of results to be sent back.
       <br />
       <br />
-      <strong > FromTime </strong > -string - No clips older than this time will be returned.
+      <strong > FromTime </strong > - string - No clips older than this time will be returned.
       <br /> Valid inputs are:
       <li > Absolute Time - Anything C# DateTime can parse</li>
       <li> Absolute Time - A Unix Timestamp</li >
       <li > Realitive Time - Times like `-1h`, `-2d`, `-4s`</li >
       <br />
-      <strong > ToTime </strong > -string - No clips newer than this time will be returned.
+      <strong > ToTime </strong > - string - No clips newer than this time will be returned.
       <br /> Valid inputs are:
       <li > Absolute Time - Anything C# DateTime can parse</li>
       <li> Absolute Time - A Unix Timestamp</li >
       <li > Realitive Time - Times like `-1h`, `-2d`, `-4s`</li >
       <br />
-      <strong > ViewCoutMin </strong > -int - Limits the lowest clip view count to be returned.
+      <strong > ViewCoutMin </strong > - int - Limits the lowest clip view count to be returned.
       <br />
       <br />
-      <strong > ChannelId </strong > -int - Only returns clips from a given channel
+      <strong > languageFilter </strong > - string - Limits the languages returend. Examples: ""en"", ""es"", etc.
+      <br />
+      <br />
+      <strong > ChannelId </strong > - int - Only returns clips from a given channel
       <br />
       <br />
       <strong > ChannelName </strong > -string - Only returns clips from a given channel
       <br />
       <br />
-      <strong > CurrentlyLive </strong > -bool - Only returns clips from channels that are live or not.
+      <strong > CurrentlyLive </strong > - bool - Only returns clips from channels that are live or not.
       <br />
       <br />
-      <strong > Partnered </strong > -bool - Only returns clips from channels that are partnered or not.
+      <strong > Partnered </strong > - bool - Only returns clips from channels that are partnered or not.
       <br />
       <br />
-      <strong > GameTitle </strong > -string - Only returns clips from games where the title contains the passed string.
+      <strong > GameTitle </strong > - string - Only returns clips from games where the title contains the passed string.
       <br />
       <br />
-      <strong > GameId </strong > -int - Only returns clips from game is the given game type id.
+      <strong > GameId </strong > - int - Only returns clips from game is the given game type id.
       <br />
       <br />
-      <strong > HypeZoneChannelId </strong > -int - Only returns clips that were taken on the given HypeZone channelId. 
+      <strong > HypeZoneChannelId </strong > - int - Only returns clips that were taken on the given HypeZone channelId. 
       <br />
    </body >
 </html >

@@ -7,7 +7,7 @@ namespace MixTok.Core
 {
     public interface IClipMineAdder
     {
-        void AddToClipMine(List<MixerClip> newClips);
+        void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration);
     }
 
     public enum ClipMineSortTypes
@@ -22,14 +22,18 @@ namespace MixTok.Core
         Dictionary<string, MixerClip> m_clipMine = new Dictionary<string, MixerClip>();
         List<MixerClip> m_viewCountSortedList = new List<MixerClip>();
         List<MixerClip> m_mixTockSortedList = new List<MixerClip>();
+        DateTime m_lastUpdateTime = DateTime.Now;
+        TimeSpan m_lastUpdateDuration = new TimeSpan(0);
 
         public ClipMine()
         {
             m_crawler = new ClipCrawler(this);
         }
 
-        public void AddToClipMine(List<MixerClip> newClips)
+        public void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration)
         {
+            DateTime start = DateTime.Now;
+
             // Lock the dictionary so we make sure no one reads or writes while we are updating.
             lock(m_clipMine)
             {
@@ -41,6 +45,9 @@ namespace MixTok.Core
 
                 // Update
                 UpdateCookedData();
+
+                m_lastUpdateTime = DateTime.Now;
+                m_lastUpdateDuration = (m_lastUpdateTime - start) + updateDuration;
             }
         }
 
@@ -152,7 +159,8 @@ namespace MixTok.Core
             int? viewCoutMin = null,
             int? channelIdFilter = null, int? hypeZoneChannelId = null,
             bool? currentlyLive = null, bool? partnered = null,
-            string gameTitle = null, int? gameId = null)
+            string gameTitle = null, int? gameId = null,
+            string languageFilter = null)
         {
             // Get the pre-sorted list we want.
             List<MixerClip> list;
@@ -240,6 +248,13 @@ namespace MixTok.Core
                             addToOutput = false;
                         }
                     }
+                    if(!String.IsNullOrWhiteSpace(languageFilter))
+                    {
+                        if(!c.Channel.Language.Equals(languageFilter, StringComparison.OrdinalIgnoreCase))
+                        {
+                            addToOutput = false;
+                        }
+                    }
 
                     // Add if if we want.
                     if (addToOutput)
@@ -278,6 +293,45 @@ namespace MixTok.Core
 
                 clip.MixTokRank = decayedRank;
             }
+        }
+
+        public int GetClipsCount()
+        {
+            lock(m_clipMine)
+            {
+                return m_clipMine.Count;
+            }
+        }
+
+        public Tuple<int, int> GetChannelCount()
+        {
+            lock(m_clipMine)
+            {
+                Dictionary<int, bool> channelMap = new Dictionary<int, bool>();
+                foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
+                {
+                    channelMap.Add(p.Value.Channel.Id, p.Value.Channel.Online);
+                }
+                int online = 0;
+                foreach(KeyValuePair<int, bool> p in channelMap)
+                {
+                    if(p.Value)
+                    {
+                        online++;
+                    }
+                }
+                return new Tuple<int, int>(channelMap.Count, online);
+            }
+        }
+
+        public DateTime GetLastUpdateTime()
+        {
+            return m_lastUpdateTime;
+        }
+
+        public TimeSpan GetLastUpdateDuration()
+        {
+            return m_lastUpdateDuration;
         }
     }
 }
