@@ -1,0 +1,93 @@
+﻿<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+        <script>
+            function Update()
+            {
+                $.get(`/api/v1/stats`, function(data, status){
+                    $("#clipCount").html(data.indexedClips);
+                    $("#clipsLast24Hr").html(data.clipsCreatedInLastDay);
+                    $("#channelsWithClips").html(data.channelsWithClips);
+                    $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
+                    $("#lastUpdated").html(data.lastUpdate);
+                    $("#lastUpdateDuration").html(data.lastUpdateDuration);
+                });
+            }
+            setInterval(Update, 1000); 
+            Update();
+        </script>
+    </head>
+<body>
+    <h1>MixTok - ClipMine</h1>
+    <h3>Current Status:</h3>
+    <strong>Clips:</strong> <span id="clipCount"></span><br />
+    <strong>Clips Created in last 24hrs:</strong> <span id="clipsLast24Hr"></span><br />
+    <strong>Channels With Clips:</strong> <span id="channelsWithClips"></span><br />
+    <strong>Live Channels With Clips:</strong> <span id="liveChannelsWithClips"></span><br />
+    <strong>Last Updated:</strong> <span id="lastUpdated"></span> ago<br />
+    <strong>Last Update Duration:</strong> <span id="lastUpdateDuration"></span>
+    <h3>API: <a href="" api/v1/ClipMine"">api/v1/ClipMine</a></h3>
+    This API allows access to all clips currently on mixer. The caller can select any set of filters to apply to the returned results.
+    <br />
+    <br />
+    All filters can be applied as URL get parameters to the REST API.
+    <br />
+    Any subset of filters can be applied together.
+    <br />
+    All filers are optional.If any filter is excluded it will not be considered.
+    <h3> Examples </h3>
+    View count sorted, only live channels, not partnered, clipped game matches ""fort""
+    <br /><a href="" api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort"">api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort</a>
+    <br />
+    <br />
+    MixTok Rank Sorted, only live channels, no more than an hour old
+    <br /><a href="" api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h"">api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h</a>
+    <h3> Filters </h3>
+    <strong> SortType </strong> - int: [0 or 1](default 0) - The order in which results are sorted.
+    <br /> 0 - ViewCount
+    <br /> 1 - MixTokRank
+    <br />
+    <br />
+    <strong> Limit </strong> - int(default 100) - The max number of results to be sent back.
+    <br />
+    <br />
+    <strong> FromTime </strong> - string - No clips older than this time will be returned.
+    <br /> Valid inputs are:
+    <li> Absolute Time - Anything C# DateTime can parse</li>
+    <li> Absolute Time - A Unix Timestamp</li>
+    <li> Realitive Time - Times like `-1h`, `-2d`, `-4s`</li>
+    <br />
+    <strong> ToTime </strong> - string - No clips newer than this time will be returned.
+    <br /> Valid inputs are:
+    <li> Absolute Time - Anything C# DateTime can parse</li>
+    <li> Absolute Time - A Unix Timestamp</li>
+    <li> Realitive Time - Times like `-1h`, `-2d`, `-4s`</li>
+    <br />
+    <strong> ViewCoutMin </strong> - int - Limits the lowest clip view count to be returned.
+    <br />
+    <br />
+    <strong> Language </strong> - string - Limits the languages returend. Examples: ""en"", ""es"", etc.
+    <br />
+    <br />
+    <strong> ChannelId </strong> - int - Only returns clips from a given channel
+    <br />
+    <br />
+    <strong> ChannelName </strong> -string - Only returns clips from a given channel
+    <br />
+    <br />
+    <strong> CurrentlyLive </strong> - bool - Only returns clips from channels that are live or not.
+    <br />
+    <br />
+    <strong> Partnered </strong> - bool - Only returns clips from channels that are partnered or not.
+    <br />
+    <br />
+    <strong> GameTitle </strong> - string - Only returns clips from games where the title contains the passed string.
+    <br />
+    <br />
+    <strong> GameId </strong> - int - Only returns clips from game is the given game type id.
+    <br />
+    <br />
+    <strong> HypeZoneChannelId </strong> - int - Only returns clips that were taken on the given HypeZone channelId.
+    <br />
+</body>
+</html>

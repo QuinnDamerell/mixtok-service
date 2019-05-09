@@ -133,6 +133,8 @@ namespace MixTok.Controllers
                         return now.AddHours(-value);
                     case 'd':
                         return now.AddDays(-value);
+                    case 'y':
+                        return now.AddYears(-value);
                     default:
                         return null;
                 }
@@ -140,6 +142,11 @@ namespace MixTok.Controllers
             // Look for a unix timestamp
             else if (long.TryParse(inputTime, out unixTime))
             {
+                // Validate it's somewhat correct.
+                if(unixTime < 10000000)
+                {
+                    return null;
+                }
                 return new DateTime(1970, 1, 1, 0, 0, 0, 0).ToUniversalTime().AddSeconds(unixTime);
             }
             return null;
