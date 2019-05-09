@@ -8,7 +8,7 @@ namespace MixTok.Core
 {
     public class ClipCrawler
     {
-        public static int MinViewerCount = 200;
+        public static int MinViewerCount = 2;
 
         IClipMineAdder m_adder;
         Thread m_updater;
