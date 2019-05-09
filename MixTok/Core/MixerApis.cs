@@ -151,7 +151,11 @@ namespace MixTok.Core
             List<MixerChannel> final = new List<MixerChannel>();
             foreach(var chan in channels)
             {
-                if(!String.IsNullOrWhiteSpace(languageFilter) && !String.IsNullOrWhiteSpace(chan.Language) && !chan.Language.Equals(languageFilter))
+                if(String.IsNullOrWhiteSpace(chan.Language))
+                {
+                    chan.Language = "unknown";
+                }
+                if(!String.IsNullOrWhiteSpace(languageFilter) && !chan.Language.Equals(languageFilter))
                 {
                     continue;
                 }

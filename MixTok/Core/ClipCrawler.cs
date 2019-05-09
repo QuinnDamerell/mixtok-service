@@ -25,6 +25,7 @@ namespace MixTok.Core
         {
             while(true)
             {
+                bool updateFailed = false;
                 try
                 {
                     // Update
@@ -33,11 +34,13 @@ namespace MixTok.Core
 
                     Program.s_ClipMine.SetStatus($"Indexing {clips.Count} new clips...");
                     m_adder.AddToClipMine(clips, DateTime.Now - start);
+                    updateFailed = false;
                 }
                 catch(Exception e)
                 {
                     Program.s_ClipMine.SetStatus($"Failed to update clips! "+e.Message);
                     Logger.Error($"Failed to update!", e);
+                    updateFailed = true;
                 }
 
                 // After we successfully get clips,
@@ -55,7 +58,11 @@ namespace MixTok.Core
                     {
                         str += $"{Math.Round(diff.TotalSeconds, 2)} secs";
                     }
-                    Program.s_ClipMine.SetStatus(str);
+                    // Don't set the text if we are showing an error.
+                    if (!updateFailed)
+                    {
+                        Program.s_ClipMine.SetStatus(str);
+                    }
                     Thread.Sleep(5000);
                 }
             }
