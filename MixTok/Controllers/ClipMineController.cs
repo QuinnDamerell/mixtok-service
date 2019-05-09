@@ -15,23 +15,13 @@ namespace MixTok.Controllers
     {
         // GET: api/v1/ClipMine
         [HttpGet]
-        public async Task<IActionResult> Get(int sortType, int? limit, string fromTime, string toTime, int? viewCoutMin, int? channelId, string channelName, bool? currentlyLive, bool? partnered, string gameTitle, int? gameId, int? hypeZoneChannelId, string language)
+        public async Task<IActionResult> Get(int sortType, int? limit, string fromTime, string toTime, int? ViewCountMin, int? channelId, string channelName, bool? isLive, bool? partnered, string gameTitle, int? gameId, int? hypeZoneChannelId, string language)
         {
             DateTime start = DateTime.Now;
 
             // Setup the limit and page values.
             int l = limit.HasValue ? limit.Value : 100;
             l = Math.Clamp(l, 0, 1000);
-
-            // If we get a channel name, convert it to a channel id.
-            if(!string.IsNullOrWhiteSpace(channelName))
-            {
-                channelId = await MixerApis.GetChannelId(channelName);
-                if(channelId == 0)
-                {
-                    return BadRequest("Invalid Channel Name");
-                }
-            }
 
             // If we get time ranges, parse them.
             DateTime? from = null;
@@ -68,7 +58,7 @@ namespace MixTok.Controllers
             }
 
             // Get the results.
-            var list = Program.s_ClipMine.GetClips(sort, l, from, to, viewCoutMin, channelId, hypeZoneChannelId, currentlyLive, partnered, gameTitle, gameId, language);
+            var list = Program.s_ClipMine.GetClips(sort, l, from, to, ViewCountMin, channelId, channelName, hypeZoneChannelId, isLive, partnered, gameTitle, gameId, language);
             Logger.Info($"ClipMine call took {DateTime.Now - start}");
             return Ok(list);
         }  

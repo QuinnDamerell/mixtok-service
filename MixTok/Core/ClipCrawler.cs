@@ -8,7 +8,7 @@ namespace MixTok.Core
 {
     public class ClipCrawler
     {
-        static int s_MinViewerCount = 2;
+        public static int MinViewerCount = 200;
 
         IClipMineAdder m_adder;
         Thread m_updater;
@@ -49,7 +49,7 @@ namespace MixTok.Core
             DateTime start = DateTime.Now;
 
             // We must limit how many channels we pull, so we will only get channels with at least 2 viewers.
-            List<MixerChannel> channels = await MixerApis.GetOnlineChannels(s_MinViewerCount, null);
+            List<MixerChannel> channels = await MixerApis.GetOnlineChannels(MinViewerCount, null);
             Logger.Info($"Found {channels.Count} online channels in {(DateTime.Now - start)}");
 
             // Get the clips for the channels

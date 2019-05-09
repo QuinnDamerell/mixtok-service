@@ -156,8 +156,8 @@ namespace MixTok.Core
         public List<MixerClip> GetClips(ClipMineSortTypes sortType,
             int limit = 100,
             DateTime? fromTime = null, DateTime? toTime = null,    
-            int? viewCoutMin = null,
-            int? channelIdFilter = null, int? hypeZoneChannelId = null,
+            int? ViewCountMin = null,
+            int? channelIdFilter = null, string channelName = null, int? hypeZoneChannelId = null,
             bool? currentlyLive = null, bool? partnered = null,
             string gameTitle = null, int? gameId = null,
             string languageFilter = null)
@@ -188,7 +188,7 @@ namespace MixTok.Core
                     MixerClip c = list[currentListPos];
                     currentListPos++;
 
-                    if (channelIdFilter.HasValue)
+                    if(channelIdFilter.HasValue)
                     {
                         // Check if this is the channel we want.
                         if (c.Channel.Id != channelIdFilter.Value)
@@ -196,7 +196,15 @@ namespace MixTok.Core
                             addToOutput = false;
                         }
                     }
-                    if(!String.IsNullOrWhiteSpace(gameTitle))
+                    if(addToOutput && !String.IsNullOrWhiteSpace(channelName))
+                    {
+                        // Check if the channel name has the current filter.
+                        if(c.Channel.Name.IndexOf(channelName, 0, StringComparison.InvariantCultureIgnoreCase) == -1)
+                        {
+                            addToOutput = false;
+                        }
+                    }
+                    if(addToOutput && !String.IsNullOrWhiteSpace(gameTitle))
                     {
                         // Check if the game title has the current filter string.
                         if(c.GameTitle.IndexOf(gameTitle, 0, StringComparison.InvariantCultureIgnoreCase) == -1)
@@ -204,7 +212,7 @@ namespace MixTok.Core
                             addToOutput = false;
                         }
                     }
-                    if(fromTime.HasValue)
+                    if(addToOutput && fromTime.HasValue)
                     {
                         // Check if this is in the time range we want.
                         if(c.UploadDate < fromTime.Value)
@@ -212,7 +220,7 @@ namespace MixTok.Core
                             addToOutput = false;
                         }
                     }
-                    if (toTime.HasValue)
+                    if (addToOutput && toTime.HasValue)
                     {
                         // Check if this is in the time range we want.
                         if (c.UploadDate > toTime.Value)
@@ -220,35 +228,35 @@ namespace MixTok.Core
                             addToOutput = false;
                         }
                     }
-                    if(viewCoutMin.HasValue)
+                    if(addToOutput && ViewCountMin.HasValue)
                     {
-                        if(c.ViewCount < viewCoutMin)
+                        if(c.ViewCount < ViewCountMin)
                         {
                             addToOutput = false;
                         }
                     }
-                    if(partnered.HasValue)
+                    if(addToOutput && partnered.HasValue)
                     {
                         if(partnered.Value != c.Channel.Partnered)
                         {
                             addToOutput = false;
                         }
                     }
-                    if(currentlyLive.HasValue)
+                    if(addToOutput && currentlyLive.HasValue)
                     {
                         if(currentlyLive.Value != c.Channel.Online)
                         {
                             addToOutput = false;
                         }
                     }
-                    if(hypeZoneChannelId.HasValue)
+                    if(addToOutput && hypeZoneChannelId.HasValue)
                     {
                         if(hypeZoneChannelId.Value != c.HypeZoneChannelId)
                         {
                             addToOutput = false;
                         }
                     }
-                    if(!String.IsNullOrWhiteSpace(languageFilter))
+                    if(addToOutput && !String.IsNullOrWhiteSpace(languageFilter))
                     {
                         if(!c.Channel.Language.Equals(languageFilter, StringComparison.OrdinalIgnoreCase))
                         {

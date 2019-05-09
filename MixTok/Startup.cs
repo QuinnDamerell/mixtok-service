@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Cors;
+using MixTok.Core;
 
 namespace MixTok
 {
@@ -25,8 +26,7 @@ namespace MixTok
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        {
-            
+        {            
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
@@ -34,6 +34,12 @@ namespace MixTok
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            // For local dev, limit the number of channels we pull to increase the index speed
+            if(env.IsDevelopment())
+            {
+                ClipCrawler.MinViewerCount = 500;
+            }
+
             // Allow static files to be served.
             app.UseDefaultFiles();
             app.UseStaticFiles();
@@ -47,10 +53,6 @@ namespace MixTok
 
             app.UseHttpsRedirection();
             app.UseMvcWithDefaultRoute();
-            //app.UseMvc(routes =>
-            //{
-            //    routes.MapRoute("default", "{controller=Home}/{action=Index}");
-            //});
         }
     }
 }
