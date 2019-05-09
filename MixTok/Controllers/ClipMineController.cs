@@ -53,6 +53,9 @@ namespace MixTok.Controllers
                 case 1:
                     sort = ClipMineSortTypes.MixTokRank;
                     break;
+                case 2:
+                    sort = ClipMineSortTypes.MostRecent;
+                    break;
                 default:
                     return BadRequest("Invalid sort type, ViewCount=0, MixTockRank=1");
             }

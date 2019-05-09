@@ -30,16 +30,34 @@ namespace MixTok.Core
                     // Update
                     DateTime start = DateTime.Now;
                     List<MixerClip> clips = await GetTockClips();
+
+                    Program.s_ClipMine.SetStatus($"Indexing {clips.Count} new clips...");
                     m_adder.AddToClipMine(clips, DateTime.Now - start);
                 }
                 catch(Exception e)
                 {
+                    Program.s_ClipMine.SetStatus($"Failed to update clips! "+e.Message);
                     Logger.Error($"Failed to update!", e);
-                } 
+                }
 
                 // After we successfully get clips,
                 // update every 5 minutes
-                Thread.Sleep(300 * 1000);
+                DateTime nextUpdate = DateTime.Now.AddMinutes(5);
+                while(nextUpdate > DateTime.Now)
+                {
+                    string str = "Next update in ";
+                    TimeSpan diff = nextUpdate - DateTime.Now;
+                    if(diff.TotalMinutes > 0)
+                    {
+                        str += $"{Math.Round(diff.TotalMinutes, 2)} mins";
+                    }
+                    else
+                    {
+                        str += $"{Math.Round(diff.TotalSeconds, 2)} secs";
+                    }
+                    Program.s_ClipMine.SetStatus(str);
+                    Thread.Sleep(5000);
+                }
             }
         }
      
@@ -48,9 +66,12 @@ namespace MixTok.Core
             // Get the online channels
             DateTime start = DateTime.Now;
 
+            Program.s_ClipMine.SetStatus($"Finding online channels...");
+
             // We must limit how many channels we pull, so we will only get channels with at least 2 viewers.
             List<MixerChannel> channels = await MixerApis.GetOnlineChannels(MinViewerCount, null);
             Logger.Info($"Found {channels.Count} online channels in {(DateTime.Now - start)}");
+            Program.s_ClipMine.SetStatus($"Getting clip data 0/{channels.Count}...");
 
             // Get the clips for the channels
             List<MixerClip> clips = new List<MixerClip>();
@@ -78,9 +99,10 @@ namespace MixTok.Core
                 }
                 
                 count++;
-                if(count % 100 == 0)
+                if(count % 10 == 0)
                 {
                     Logger.Info($"Got {count}/{channels.Count} channel clips...");
+                    Program.s_ClipMine.SetStatus($"Getting clip data {count}/{channels.Count}...");                    
                 }
             }
 

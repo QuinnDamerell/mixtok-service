@@ -1,93 +1,493 @@
 ﻿<html>
     <head>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-        <script>
-            function Update()
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MixTok - ClipMine Explorer</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/hls.js@0.12.2/dist/hls.min.js"></script>
+    <script>
+    
+    </script>
+    <script>
+        let globalRequestId = 0;
+        let globalRefreshId = 0;
+
+        var updatingStrings = [
+            "Accessing the hive mind...",
+            "Asking the mixer gods...",
+            "Unearthing more clips...",
+            "Accessing the clip matrix...",
+            "Asking Quinn to find more clips..."
+        ]
+
+        function RefreshResults()
+        {
+            // To prevent us from calling the API every time a letter is typed,
+            // set a delay and only make the request if nothing else comes in.
+            globalRefreshId++;
+            var localRefreshId = globalRefreshId;
+            setTimeout(function(){
+                if(globalRefreshId !== localRefreshId) return;
+                RefreshResultsDoIt();
+            }, 100);
+        }
+
+        function RefreshResultsDoIt() 
+        {
+            var urlArgs = "?";
+            var sortType = 0;
+            var sortValue = $("#sortType").children("option:selected").val();
+            if (sortValue === "mixTokRank")
             {
-                $.get(`/api/v1/stats`, function(data, status){
-                    $("#clipCount").html(data.indexedClips);
-                    $("#clipsLast24Hr").html(data.clipsCreatedInLastDay);
-                    $("#channelsWithClips").html(data.channelsWithClips);
-                    $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
-                    $("#lastUpdated").html(data.lastUpdate);
-                    $("#lastUpdateDuration").html(data.lastUpdateDuration);
-                });
+                sortType = 1;
             }
-            setInterval(Update, 1000); 
-            Update();
-        </script>
+            else if (sortValue === "mostRecent")
+            {
+                sortType = 2;
+            }
+            else
+            {
+                sortType = 0;
+            }
+
+            urlArgs += `sortType=${sortType}`
+
+            var fromTime = $("#fromTime").val()
+            if(fromTime.length !== 0)
+            {
+                urlArgs += `&fromTime=${fromTime}`
+            }
+
+            var toTime = $("#toTime").val()
+            if(toTime.length !== 0)
+            {
+                urlArgs += `&toTime=${toTime}`
+            }
+
+            var language = $("#language").val()
+            if(language.length !== 0)
+            {
+                urlArgs += `&language=${language}`
+            }
+
+            var gameTitle = $("#gameTitle").val()
+            if(gameTitle.length !== 0)
+            {
+                urlArgs += `&gameTitle=${gameTitle}`
+            }
+
+            var channelName = $("#channelName").val()
+            if(channelName.length !== 0)
+            {
+                urlArgs += `&channelName=${channelName}`
+            }
+
+            var minViewCount = $("#minViewCount").val()
+            if(minViewCount.length !== 0)
+            {
+                urlArgs += `&ViewCountMin=${minViewCount}`
+            }
+
+            var isLiveValue = $("#isLive").children("option:selected").val();
+            if( isLiveValue === "live")
+            {
+                urlArgs += `&isLive=true`
+            }
+            else if(isLiveValue === "notLive")
+            {
+                urlArgs += `&isLive=false`
+            }
+
+            var partneredValue = $("#partnered").children("option:selected").val();
+            if( partneredValue === "partnered")
+            {
+                urlArgs += `&partnered=true`
+            }
+            else if(partneredValue === "notPartnered")
+            {
+                urlArgs += `&partnered=false`
+            }   
+            
+            var hypezoneChannel = $("#hypezoneChannel").children("option:selected").val();
+            if(hypezoneChannel === "apex")
+            {
+                urlArgs += `&HypeZoneChannelId=66309516`
+            }
+            else if(hypezoneChannel === "fortnite")
+            {
+                urlArgs += `&HypeZoneChannelId=19312622`
+            }
+            else if(hypezoneChannel === "pubg")
+            {
+                urlArgs += `&HypeZoneChannelId=13917677`
+            }
+            else if(hypezoneChannel === "blackops4")
+            {
+                urlArgs += `&HypeZoneChannelId=51494472`
+            }
+            else if(hypezoneChannel === "Rainbow6")
+            {
+                urlArgs += `&HypeZoneChannelId=35612731`
+            }
+
+            // Increment the global request id and then take it locally.
+            globalRequestId++;     
+            var localRequestId = globalRequestId;
+
+            // Set a timer to clear the UI if the request is talking a long time.
+            var isUpdated = false;
+            setTimeout(function() {
+                // Make sure we don't already have results
+                if(isUpdated) return;
+                
+                // Ensure our request is still the newest request.
+                if(globalRequestId !== localRequestId) return;
+
+                // Show some text to say we are updating.
+                $("#resultsPanel").html(""+updatingStrings[Math.floor(Math.random() * updatingStrings.length)]);
+            }, 500);
+
+            $.get(`/api/v1/ClipMine${urlArgs}`, 
+                function(data){
+                    isUpdated = true;
+                    // Ensure our request is still the newest request.
+                    if(globalRequestId !== localRequestId) return;
+
+                    // Push the results
+                    $("#resultsPanel").html("");
+                    if(data.length === 0)
+                    {
+                        $("#resultsPanel").html("No Results!");
+                    }
+                    else
+                    {                        
+                        for (var i in data) 
+                        {
+                            var clip = data[i]
+
+                            var thumbUrl;
+                            for(var c in clip.contentLocators)
+                            {
+                                if(clip.contentLocators[c].locatorType === "Thumbnail_Small")
+                                {
+                                    thumbUrl = clip.contentLocators[c].uri;
+                                }
+                            }
+
+                            $("#resultsPanel").append(
+                            `
+                            <div id="clipContainer" class="${i & 0 === 0 ? "darken" : "normal"}">
+                                <div id="clipThumbHolder"  onclick="playClip('${clip.clipUrl}')">
+                                    <img id="clipThumb" src="${thumbUrl}" />
+                                    <img id="clipThumPlayIcon" src="playIcon.png" />
+                                </div>
+                                <div id="clipDetails">
+                                    <strong>Title: </strong>${clip.title}<br />
+                                    <strong>Channel: </strong><a href="https://mixer.com/${clip.channel.token}" target="_blank">${clip.channel.token}</a><br />
+                                    <strong>Views: </strong>${clip.viewCount}<br />
+                                    <strong>Game:  </strong>${clip.gameTitle}<br />
+                                    <strong>Live Now: </strong>${clip.channel.online}<br />
+                                    <strong>Created: </strong>${(new Date(clip.uploadDate)).toLocaleString()}<br />
+                                    <strong>Share Link: </strong><a target="_blank" href="${clip.shareableUrl}">${clip.shareableUrl}</a><br />                                    
+                                </div>
+                            </div>
+                            `
+                        );
+                    }
+                }
+            })
+            .fail(function(data, textStatus, xhr) {
+
+                isUpdated = true;
+                
+                // Ensure our request is still the newest request.
+                if(globalRequestId !== localRequestId) return;
+
+                // Report the error.
+                $("#resultsPanel").html(`<strong>${xhr}</strong><br/>${data.responseText}`);
+            });       
+        }
+
+        function UpdateStats()
+        {
+            $.get(`/api/v1/stats`, function(data, status){
+                $("#stats").html(`<strong>${Number(data.indexedClips).toLocaleString('en')} Clips Indexed</strong> - ${Number(data.channelsWithClips).toLocaleString('en')} Channels`);
+                $("#statusText").html(`${data.currentStatus}`);
+                // $("#clipsLast24Hr").html(data.clipsCreatedInLastDay);
+                // $("#channelsWithClips").html(data.channelsWithClips);
+                // $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
+                // $("#lastUpdated").html(data.lastUpdate);
+                // $("#lastUpdateDuration").html(data.lastUpdateDuration);
+            });
+        }
+
+        $(function() {
+            $("#sortType").change(function() {
+                RefreshResults();
+            });
+            $('#fromTime').on('input',function(e){
+                RefreshResults();
+            });
+            $('#toTime').on('input',function(e){
+                RefreshResults();
+            });
+            $('#language').on('input',function(e){
+                RefreshResults();
+            });
+            $('#gameTitle').on('input',function(e){
+                RefreshResults();
+            });
+            $('#channelName').on('input',function(e){
+                RefreshResults();
+            });
+            $('#minViewCount').on('input',function(e){
+                RefreshResults();
+            });
+            $("#isLive").change(function() {
+                RefreshResults();
+            });
+            $("#partnered").change(function() {
+                RefreshResults();
+            });
+            $("#hypezoneChannel").change(function() {
+                RefreshResults();
+            });     
+            $("#popupVideoClose").click(function() {
+                closePopup();
+            });         
+
+            setInterval(UpdateStats, 2000); 
+            
+            RefreshResults(); 
+            UpdateStats();           
+        }); 
+        
+        var currentHlsPlayer = null;
+
+        function playClip(url)
+        {
+            // Show the popup
+            $("#vidPopup")[0].classList.toggle("show");
+
+            // Get and stop any current videos
+            var videoPlayer = $("#popupVideo")[0]
+            videoPlayer.pause();
+
+            // Kill any old players
+            if(currentHlsPlayer !== null)
+            {
+                currentHlsPlayer.destroy();                
+            }
+
+            // Build a new HLS player
+            var hlsjsConfig = {};
+            currentHlsPlayer = new Hls(hlsjsConfig);
+            currentHlsPlayer.loadSource(url);
+            currentHlsPlayer.attachMedia(videoPlayer);
+            currentHlsPlayer.on(Hls.Events.MANIFEST_PARSED,function() {
+                videoPlayer.play();
+            });
+        }
+        
+        function closePopup()
+        {
+            $("#vidPopup")[0].classList.toggle("show");
+            var videoPlayer = $("#popupVideo")[0];
+            videoPlayer.pause();
+            if(currentHlsPlayer !== null)
+            {
+                currentHlsPlayer.destroy();                
+            }
+        }        
+    </script>
+    <style>
+         /* The sidebar menu */
+        .sidenav {
+            height: 100%; /* Full-height: remove this if you want "auto" height */
+            width: 270px; /* Set the width of the sidebar */
+            position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+            z-index: 1; /* Stay on top */
+            top: 0; /* Stay at the top */
+            left: 0;
+            background-color: #efefef;
+            text-decoration-color: #a9a9a9;
+            overflow-x: hidden; /* Disable horizontal scroll */
+            padding-top: 10px;
+            padding-left: 10px;
+        }
+        /* The navigation menu links */
+        .sidenav a {
+            color: blue;
+        }
+        /* Style page content */
+        .main {
+            margin-left: 270px; /* Same as the width of the sidebar */
+            width: 80%;
+            padding: 0px 00px;
+        }
+        #title {
+            font-size: 28px;
+        }
+        #apiDocs {
+            font-size: 15px;
+        }
+        #filterHeader {
+            padding-top: 20px;
+            font-size: 20px;
+        }
+        .filter {
+            width: 230px;
+            margin-top: 5px;
+        }
+        /* On smaller screens, where height is less than 450px, change the style of the sidebar (less padding and a smaller font size) */
+        @media screen and (max-height: 450px) {
+            .sidenav {padding-top: 15px;}
+            .sidenav a {font-size: 18px;}
+        } 
+
+        .darken {
+            background-color: #caebf2
+        }
+        #clipContainer {
+            height: 150px;
+            width: 100%;
+            display: flex;
+            padding: 10px;
+        }
+        #clipThumbHolder {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 17.5%;
+        }
+        #clipThumb {
+            max-width:100%;
+            max-height:100%;
+            position: relative;
+            top: 0;
+            left: 0;
+        }
+        #clipThumPlayIcon {
+            position: absolute; 
+            height:40px;
+            top: 95px;
+            left: 8px;
+        }
+        #clipDetails {
+            padding-left: 10px;
+            width: 50%;
+        }
+        #rightThing {
+            width: 25%;
+            background-color: yellow;
+        }
+        /* Popup container - can be anything you want */
+        
+        /* The actual popup */
+        .main .popupOverlay {
+            visibility: hidden;
+            width: 900px;
+            background-color: rgba(85, 85, 85, 1.0);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px 0;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            right: 0;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #popupVideo {
+            width: 850px;
+            height:480px;
+        }
+
+        #popupVideoClose {
+            align-self: left;
+            width:150px;
+            padding: 5px;
+            margin: 10px;
+        }
+        
+        /* Toggle this class - hide and show the popup */
+        .main .show {
+            visibility: visible;
+            -webkit-animation: fadeIn 1s;
+            animation: fadeIn 1s;
+        }
+        
+        /* Add animation (fade in the popup) */
+        @-webkit-keyframes fadeIn {
+            from {opacity: 0;} 
+            to {opacity: 1;}
+        }
+        
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity:1 ;}
+        }
+    </style>
     </head>
-<body>
-    <h1>MixTok - ClipMine</h1>
-    <h3>Current Status:</h3>
-    <strong>Clips:</strong> <span id="clipCount"></span><br />
-    <strong>Clips Created in last 24hrs:</strong> <span id="clipsLast24Hr"></span><br />
-    <strong>Channels With Clips:</strong> <span id="channelsWithClips"></span><br />
-    <strong>Live Channels With Clips:</strong> <span id="liveChannelsWithClips"></span><br />
-    <strong>Last Updated:</strong> <span id="lastUpdated"></span> ago<br />
-    <strong>Last Update Duration:</strong> <span id="lastUpdateDuration"></span>
-    <h3>API: <a href="" api/v1/ClipMine"">api/v1/ClipMine</a></h3>
-    This API allows access to all clips currently on mixer. The caller can select any set of filters to apply to the returned results.
-    <br />
-    <br />
-    All filters can be applied as URL get parameters to the REST API.
-    <br />
-    Any subset of filters can be applied together.
-    <br />
-    All filers are optional.If any filter is excluded it will not be considered.
-    <h3> Examples </h3>
-    View count sorted, only live channels, not partnered, clipped game matches ""fort""
-    <br /><a href="" api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort"">api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort</a>
-    <br />
-    <br />
-    MixTok Rank Sorted, only live channels, no more than an hour old
-    <br /><a href="" api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h"">api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h</a>
-    <h3> Filters </h3>
-    <strong> SortType </strong> - int: [0 or 1](default 0) - The order in which results are sorted.
-    <br /> 0 - ViewCount
-    <br /> 1 - MixTokRank
-    <br />
-    <br />
-    <strong> Limit </strong> - int(default 100) - The max number of results to be sent back.
-    <br />
-    <br />
-    <strong> FromTime </strong> - string - No clips older than this time will be returned.
-    <br /> Valid inputs are:
-    <li> Absolute Time - Anything C# DateTime can parse</li>
-    <li> Absolute Time - A Unix Timestamp</li>
-    <li> Realitive Time - Times like `-1h`, `-2d`, `-4s`</li>
-    <br />
-    <strong> ToTime </strong> - string - No clips newer than this time will be returned.
-    <br /> Valid inputs are:
-    <li> Absolute Time - Anything C# DateTime can parse</li>
-    <li> Absolute Time - A Unix Timestamp</li>
-    <li> Realitive Time - Times like `-1h`, `-2d`, `-4s`</li>
-    <br />
-    <strong> ViewCountMin </strong> - int - Limits the lowest clip view count to be returned.
-    <br />
-    <br />
-    <strong> Language </strong> - string - Limits the languages returend. Examples: ""en"", ""es"", etc.
-    <br />
-    <br />
-    <strong> ChannelId </strong> - int - Only returns clips from a given channel
-    <br />
-    <br />
-    <strong> ChannelName </strong> -string - Only returns clips from a given channel
-    <br />
-    <br />
-    <strong> isLive </strong> - bool - Only returns clips from channels that are live or not.
-    <br />
-    <br />
-    <strong> Partnered </strong> - bool - Only returns clips from channels that are partnered or not.
-    <br />
-    <br />
-    <strong> GameTitle </strong> - string - Only returns clips from games where the title contains the passed string.
-    <br />
-    <br />
-    <strong> GameId </strong> - int - Only returns clips from game is the given game type id.
-    <br />
-    <br />
-    <strong> HypeZoneChannelId </strong> - int - Only returns clips that were taken on the given HypeZone channelId.
-    <br />
-</body>
+    <body>
+         <!-- Side navigation -->
+        <div class="sidenav">
+            <div id="title">MixTok - ClipMine!</div>
+            <div id="stats">0 Clips - 0 Channels</div>
+            <div id="statusText"></div>
+            <div id="apiDocs"><a herf="apidocs.html">API Docs</a></div>
+            <div id="filterHeader">Sort</div>
+            <select class="filter" id="sortType">
+                <option value="viewCount">View Count</option>
+                <option value="mostRecent">Most Recent</option>
+                <option value="mixTokRank">MixTok Rank</option>
+            </select> 
+            <div id="filterHeader">From Time</div>
+            <input type="text" class="filter" id="fromTime" placeholder="1h, 3d, 15m..." />
+            <div id="filterHeader">To Time</div>
+            <input type="text" class="filter" id="toTime" placeholder="1h, 3d, 15m..." />
+            <div id="filterHeader">Language</div>
+            <input type="text" class="filter" id="language" placeholder="en, es..." /> 
+            <div id="filterHeader">Game Title</div>
+            <input type="text" class="filter" id="gameTitle" placeholder="League Of Legends, Fortnite..." />            
+            <div id="filterHeader">Channel Name</div>
+            <input type="text" class="filter" id="channelName" placeholder="Quinninator, Forest..." /> 
+            <div id="filterHeader">Min Clip View Count</div>
+            <input type="number" class="filter" id="minViewCount" placeholder="5, 10, 15..." />
+            <div id="filterHeader">Is Live</div>
+            <select class="filter" id="isLive">
+                <option value="any">Any</option>
+                <option value="live">Live</option>
+                <option value="notLive">Not Live</option>
+            </select> 
+            <div id="filterHeader">Partnered</div>
+            <select class="filter" id="partnered">
+                <option value="any">Any</option>
+                <option value="partnered">Partnered</option>
+                <option value="notPartnered">Not Partnered</option>
+            </select> 
+            <div id="filterHeader">HypeZone Channel</div>
+            <select class="filter" id="hypezoneChannel">
+                <option value="any">Any</option>
+                <option value="apex">APEX</option>
+                <option value="fortnite">Fortnite</option>
+                <option value="pubg">PUBG</option>
+                <option value="blackops4">Black Ops 4</option>
+                <option value="Rainbow6">Rainbow 6</option>
+            </select> 
+            <div id="filterHeader"></div>
+            <button type="button">Clear All</button>
+        </div>
+      
+      <!-- Page content -->
+      <div class="main">
+        <span class="popupOverlay" id="vidPopup">
+            <video id="popupVideo" controls ></video>
+            <button type="button" id="popupVideoClose">- Close -</button>
+        </span>
+        <div id="resultsPanel"></div>
+      </div> 
+    </body>
 </html>

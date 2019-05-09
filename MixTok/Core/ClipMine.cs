@@ -14,16 +14,19 @@ namespace MixTok.Core
     {
         ViewCount = 0,
         MixTokRank = 1,
+        MostRecent = 2
     }
 
     public class ClipMine : IClipMineAdder
     {
         ClipCrawler m_crawler;
         Dictionary<string, MixerClip> m_clipMine = new Dictionary<string, MixerClip>();
-        List<MixerClip> m_viewCountSortedList = new List<MixerClip>();
-        List<MixerClip> m_mixTockSortedList = new List<MixerClip>();
+        LinkedList<MixerClip> m_viewCountSortedList = new LinkedList<MixerClip>();
+        LinkedList<MixerClip> m_mixTockSortedList = new LinkedList<MixerClip>();
+        LinkedList<MixerClip> m_mostRecentList = new LinkedList<MixerClip>();
         DateTime m_lastUpdateTime = DateTime.Now;
         TimeSpan m_lastUpdateDuration = new TimeSpan(0);
+        string m_status;
 
         public ClipMine()
         {
@@ -120,7 +123,7 @@ namespace MixTok.Core
                 m_viewCountSortedList.Clear();
                 foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
                 {
-                    InsertSort(ref m_viewCountSortedList, p.Value, true);
+                    InsertSort(ref m_viewCountSortedList, p.Value, ClipMineSortTypes.ViewCount);
                 }
             }    
 
@@ -132,25 +135,52 @@ namespace MixTok.Core
                 m_mixTockSortedList.Clear();
                 foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
                 {
-                    InsertSort(ref m_mixTockSortedList, p.Value, false);
+                    InsertSort(ref m_mixTockSortedList, p.Value, ClipMineSortTypes.MixTokRank);
                 }
             }
+
+            // Update the mixtok rank sorted list.
+            lock (m_mostRecentList)
+            {
+                // To update the list, delete everything we had and rebuild it
+                // based on the new mine.
+                m_mostRecentList.Clear();
+                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
+                {
+                    InsertSort(ref m_mostRecentList, p.Value, ClipMineSortTypes.MostRecent);
+                }
+            }            
 
             Logger.Info($"Cooking data done: {DateTime.Now - start}");
         }
 
-        private void InsertSort(ref List<MixerClip> list, MixerClip c, bool useViewCount)
+        private void InsertSort(ref LinkedList<MixerClip> list, MixerClip c, ClipMineSortTypes type)
         {
-            for (int i = 0; i < list.Count; i++)
+            LinkedListNode<MixerClip> node = list.First;
+            while(node != null)
             {
-                bool result = useViewCount ? (c.ViewCount > list[i].ViewCount) : (c.MixTokRank > list[i].MixTokRank);
+                bool result = false;
+                switch(type)
+                {
+                    case ClipMineSortTypes.MostRecent:
+                        result = c.UploadDate > node.Value.UploadDate;
+                        break;
+                    case ClipMineSortTypes.MixTokRank:
+                        result = c.MixTokRank > node.Value.MixTokRank;
+                        break;
+                    default:
+                    case ClipMineSortTypes.ViewCount:
+                        result = c.ViewCount > node.Value.ViewCount;
+                        break;
+                }
                 if (result)
                 {
-                    list.Insert(i, c);
+                    list.AddBefore(node, c);
                     return;
                 }
+                node = node.Next;
             }
-            list.Add(c);
+            list.AddLast(c);
         }
 
         public List<MixerClip> GetClips(ClipMineSortTypes sortType,
@@ -163,7 +193,7 @@ namespace MixTok.Core
             string languageFilter = null)
         {
             // Get the pre-sorted list we want.
-            List<MixerClip> list;
+            LinkedList<MixerClip> list;
             switch(sortType)
             {
                 default:
@@ -173,6 +203,9 @@ namespace MixTok.Core
                 case ClipMineSortTypes.MixTokRank:
                     list = m_mixTockSortedList;
                     break;
+                case ClipMineSortTypes.MostRecent:
+                    list = m_mostRecentList;
+                    break;
             }
 
             List<MixerClip> output = new List<MixerClip>();
@@ -181,12 +214,12 @@ namespace MixTok.Core
             {
                 // Go through the current sorted list from the highest to the lowest.
                 // Apply the filtering and then build the output list.
-                int currentListPos = 0;
-                while(output.Count < limit && currentListPos < list.Count)
+                LinkedListNode<MixerClip> node = list.First;
+                while(output.Count < limit && node != null)
                 {
                     bool addToOutput = true;
-                    MixerClip c = list[currentListPos];
-                    currentListPos++;
+                    MixerClip c = node.Value;
+                    node = node.Next;
 
                     if(channelIdFilter.HasValue)
                     {
@@ -360,6 +393,16 @@ namespace MixTok.Core
         public TimeSpan GetLastUpdateDuration()
         {
             return m_lastUpdateDuration;
+        }
+
+        public void SetStatus(string str)
+        {
+            m_status = str;
+        }
+
+        public string GetStatus()
+        {
+            return m_status;
         }
     }
 }
