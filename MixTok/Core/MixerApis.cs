@@ -233,7 +233,6 @@ namespace MixTok.Core
             catch(Exception e)
             {
                 Logger.Error($"Failed to get game name for {typeId}: {e.Message}");
-
             }
             return "Unknown";
         }

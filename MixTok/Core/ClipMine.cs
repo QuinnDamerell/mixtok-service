@@ -310,7 +310,10 @@ namespace MixTok.Core
                 Dictionary<int, bool> channelMap = new Dictionary<int, bool>();
                 foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
                 {
-                    channelMap.Add(p.Value.Channel.Id, p.Value.Channel.Online);
+                    if(!channelMap.ContainsKey(p.Value.Channel.Id))
+                    {
+                        channelMap.Add(p.Value.Channel.Id, p.Value.Channel.Online);
+                    }
                 }
                 int online = 0;
                 foreach(KeyValuePair<int, bool> p in channelMap)
@@ -321,6 +324,23 @@ namespace MixTok.Core
                     }
                 }
                 return new Tuple<int, int>(channelMap.Count, online);
+            }
+        }
+
+        public int ClipsCreatedInLastTime(TimeSpan ts)
+        {
+            lock (m_clipMine)
+            {
+                int count = 0;
+                DateTime now = DateTime.UtcNow;
+                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
+                {
+                    if(now - p.Value.UploadDate < ts)
+                    {
+                        count++;
+                    }
+                }
+                return count;
             }
         }
 

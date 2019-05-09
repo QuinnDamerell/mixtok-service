@@ -20,8 +20,9 @@ namespace MixTok.Controllers
             output = output.Replace("{channel}", tup.Item1 + String.Empty);
             output = output.Replace("{onlineChannels}", tup.Item2 + String.Empty);
             output = output.Replace("{clips}", Program.s_ClipMine.GetClipsCount() + String.Empty);
-            output = output.Replace("{lastUpdate}", (DateTime.Now - Program.s_ClipMine.GetLastUpdateTime()).ToString() + String.Empty);
-            output = output.Replace("{lastUpdateDuration}", Program.s_ClipMine.GetLastUpdateDuration().ToString());
+            output = output.Replace("{lastUpdate}", FormatTime(DateTime.Now - Program.s_ClipMine.GetLastUpdateTime()));
+            output = output.Replace("{lastUpdateDuration}", FormatTime(Program.s_ClipMine.GetLastUpdateDuration()));
+            output = output.Replace("{last24hrClips}", Program.s_ClipMine.ClipsCreatedInLastTime(new TimeSpan(24, 0, 0)) + String.Empty);
 
             return new ContentResult
             {
@@ -35,10 +36,13 @@ namespace MixTok.Controllers
 <html>
    <body>
       <h1>MixTok - ClipMine</h1>
-      <h3>Current Index: {channel} Channels, {onlineChannels} Online Channels, {clips} Clips</h3>
-      </h2>Last Updated {lastUpdate} Ago, Last Update Duration {lastUpdateDuration}</h2>
-      <br/>
-      <br/>
+      <h3>Current Status:</h3>
+      <strong>Clips:</strong> {clips}<br />
+      <strong>Clips Created in last 24hrs:</strong> {last24hrClips}<br />
+      <strong>Channels With Clips:</strong> {channel}<br />
+      <strong>Live Channels With Clips:</strong> {onlineChannels}<br />
+      <strong>Last Updated:</strong> {lastUpdate} ago<br />
+      <strong>Last Update Duration:</strong> {lastUpdateDuration}
       <h3>API: <a href=""api/v1/ClipMine"">api/v1/ClipMine</a></h3>
       This API allows access to all clips currently on mixer. The caller can select any set of filters to apply to the returned results.
       <br />
@@ -79,7 +83,7 @@ namespace MixTok.Controllers
       <strong > ViewCoutMin </strong > - int - Limits the lowest clip view count to be returned.
       <br />
       <br />
-      <strong > languageFilter </strong > - string - Limits the languages returend. Examples: ""en"", ""es"", etc.
+      <strong > Language </strong > - string - Limits the languages returend. Examples: ""en"", ""es"", etc.
       <br />
       <br />
       <strong > ChannelId </strong > - int - Only returns clips from a given channel
@@ -105,5 +109,18 @@ namespace MixTok.Controllers
    </body >
 </html >
 ";
+
+        private string FormatTime(TimeSpan s)
+        {
+            if(s.TotalSeconds <= 60)
+            {
+                return $"{Math.Round(s.TotalSeconds, 2)} seconds";
+            }
+            if(s.TotalMinutes <= 60)
+            {
+                return $"{Math.Round(s.TotalMinutes, 2)} minutes";
+            }
+            return $"{Math.Round(s.TotalHours, 2)} hours";
+        }
     }
 }
