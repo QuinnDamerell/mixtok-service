@@ -41,7 +41,7 @@ namespace MixTok.Core
                     List<MixerClip> clips = await GetTockClips();
 
                     Program.s_ClipMine.SetStatus($"Indexing {clips.Count} new clips...");
-                    m_adder.AddToClipMine(clips, DateTime.Now - start);
+                    m_adder.AddToClipMine(clips, DateTime.Now - start, false);
                     updateFailed = false;
                 }
                 catch(Exception e)

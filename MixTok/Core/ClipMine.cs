@@ -8,7 +8,7 @@ namespace MixTok.Core
 {
     public interface IClipMineAdder
     {
-        void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration);
+        void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration, bool isRestore);
     }
 
     public enum ClipMineSortTypes
@@ -32,7 +32,7 @@ namespace MixTok.Core
         LinkedList<MixerClip> m_mostRecentList = new LinkedList<MixerClip>();
         DateTime m_lastUpdateTime = DateTime.Now;
         TimeSpan m_lastUpdateDuration = new TimeSpan(0);
-        DateTime m_lastDatabaseBackup = DateTime.Now;
+        DateTime m_lastDatabaseBackup = DateTime.MinValue;
         string m_status;
 
         public ClipMine()
@@ -55,7 +55,7 @@ namespace MixTok.Core
             worker.Start();
         }
 
-        public void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration)
+        public void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration, bool isRestore)
         {
             DateTime start = DateTime.Now;
 
@@ -75,9 +75,10 @@ namespace MixTok.Core
                 m_lastUpdateDuration = (m_lastUpdateTime - start) + updateDuration;
 
                 // Check if we should write our current database as a backup.
-                if(DateTime.Now - m_lastDatabaseBackup > new TimeSpan(0, 30, 0))
+                if(!isRestore && DateTime.Now - m_lastDatabaseBackup > new TimeSpan(0, 30, 0))
                 {
-                    m_historian.BackupCurrentDb(m_clipMine, this, c_databaseVersion);    
+                    m_historian.BackupCurrentDb(m_clipMine, this, c_databaseVersion);
+                    m_lastDatabaseBackup = DateTime.Now;
                 }
             }          
         }
@@ -421,6 +422,11 @@ namespace MixTok.Core
         public TimeSpan GetLastUpdateDuration()
         {
             return m_lastUpdateDuration;
+        }
+
+        public DateTime GetLastBackupTime()
+        {
+            return m_lastDatabaseBackup;
         }
 
         public void SetStatus(string str)

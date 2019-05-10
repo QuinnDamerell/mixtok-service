@@ -14,6 +14,7 @@ namespace MixTok.Controllers
         public int LiveChannelsWithClips;
         public string LastUpdate;
         public string LastUpdateDuration;
+        public string LastBackup;
         public int ClipsCreatedInLastDay;
         public string CurrentStatus;
     }
@@ -34,6 +35,7 @@ namespace MixTok.Controllers
                 IndexedClips = Program.s_ClipMine.GetClipsCount(),
                 LastUpdate = FormatTime(DateTime.Now - Program.s_ClipMine.GetLastUpdateTime()),
                 LastUpdateDuration = FormatTime(Program.s_ClipMine.GetLastUpdateDuration()),
+                LastBackup = FormatTime(DateTime.Now - Program.s_ClipMine.GetLastBackupTime()),
                 ClipsCreatedInLastDay = Program.s_ClipMine.ClipsCreatedInLastTime(new TimeSpan(24, 0, 0)),
                 CurrentStatus = Program.s_ClipMine.GetStatus()
             };

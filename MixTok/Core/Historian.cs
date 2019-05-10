@@ -71,7 +71,7 @@ namespace MixTok.Core
                 adder.SetStatus("History is good, restoring...");
 
                 // Push the database in!
-                adder.AddToClipMine(backup.database, (DateTime.Now - start));
+                adder.AddToClipMine(backup.database, (DateTime.Now - start), true);
             }
             catch(Exception e)
             {
