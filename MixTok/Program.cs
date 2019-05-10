@@ -18,6 +18,7 @@ namespace MixTok
         public static void Main(string[] args)
         {
             s_ClipMine = new ClipMine();
+            s_ClipMine.Start();
             CreateWebHostBuilder(args).Build().Run();
         }
 

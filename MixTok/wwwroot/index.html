@@ -254,7 +254,20 @@
             });     
             $("#popupVideoClose").click(function() {
                 closePopup();
-            });         
+            }); 
+            $("#clearAll").click(function() {
+                $("#sortType").val("viewCount");
+                $("#fromTime").val("");
+                $("#toTime").val("");
+                $("#language").val("");
+                $("#gameTitle").val("");
+                $("#channelName").val("");
+                $("#minViewCount").val("");
+                $("#isLive").val("any");
+                $("#partnered").val("any");
+                $("#hypezoneChannel").val("any");
+                RefreshResults();
+            });                 
 
             setInterval(UpdateStats, 2000); 
             
@@ -479,7 +492,7 @@
                 <option value="Rainbow6">Rainbow 6</option>
             </select> 
             <div id="filterHeader"></div>
-            <button type="button">Clear All</button>
+            <button type="button" id="clearAll">Clear All</button>
         </div>
       
       <!-- Page content -->

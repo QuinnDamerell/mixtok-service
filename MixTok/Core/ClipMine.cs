@@ -30,6 +30,10 @@ namespace MixTok.Core
 
         public ClipMine()
         {
+        }
+
+        public void Start()
+        {
             m_crawler = new ClipCrawler(this);
         }
 

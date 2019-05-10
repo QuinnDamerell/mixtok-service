@@ -38,7 +38,7 @@ namespace MixTok.Core
                 }
                 catch(Exception e)
                 {
-                    Program.s_ClipMine.SetStatus($"Failed to update clips! "+e.Message);
+                    Program.s_ClipMine.SetStatus($"<strong>Failed to update clips!</strong> "+e.Message + "; stack: "+e.StackTrace);
                     Logger.Error($"Failed to update!", e);
                     updateFailed = true;
                 }
