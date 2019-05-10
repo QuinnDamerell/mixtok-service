@@ -8,7 +8,7 @@ namespace MixTok.Core
 {
     public class ClipCrawler
     {
-        public static int MinViewerCount = 2;
+        int MinViewerCount = 2;
 
         IClipMineAdder m_adder;
         Thread m_updater;
@@ -16,6 +16,14 @@ namespace MixTok.Core
 
         public ClipCrawler(IClipMineAdder adder)
         {
+            // For local testing, set the min view count to be higher.
+            var test = Environment.GetEnvironmentVariables();
+            string var = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if(!String.IsNullOrWhiteSpace(var) && var == "Development")
+            {
+                MinViewerCount = 500;
+            }
+
             m_adder = adder;
             m_updater = new Thread(UpdateThread);
             m_updater.Start();

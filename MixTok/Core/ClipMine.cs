@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MixTok.Core
@@ -19,6 +20,11 @@ namespace MixTok.Core
 
     public class ClipMine : IClipMineAdder
     {
+        // This value is used for the save / restore.
+        // If anything in any of the objects change, this should be updated.
+        const int c_databaseVersion = 1;
+
+        Historian m_historian;
         ClipCrawler m_crawler;
         Dictionary<string, MixerClip> m_clipMine = new Dictionary<string, MixerClip>();
         LinkedList<MixerClip> m_viewCountSortedList = new LinkedList<MixerClip>();
@@ -26,15 +32,27 @@ namespace MixTok.Core
         LinkedList<MixerClip> m_mostRecentList = new LinkedList<MixerClip>();
         DateTime m_lastUpdateTime = DateTime.Now;
         TimeSpan m_lastUpdateDuration = new TimeSpan(0);
+        DateTime m_lastDatabaseBackup = DateTime.Now;
         string m_status;
 
         public ClipMine()
         {
+            m_historian = new Historian();
         }
 
         public void Start()
         {
-            m_crawler = new ClipCrawler(this);
+            // Start a worker
+            Thread worker = new Thread(() =>
+            {
+                // Ask the historian to try to restore our in
+                // memory database from a previous database.
+                m_historian.AttemptToRestore(this, c_databaseVersion);
+
+                // Now start the normal miner.
+                m_crawler = new ClipCrawler(this);
+            });
+            worker.Start();
         }
 
         public void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration)
@@ -55,7 +73,13 @@ namespace MixTok.Core
 
                 m_lastUpdateTime = DateTime.Now;
                 m_lastUpdateDuration = (m_lastUpdateTime - start) + updateDuration;
-            }
+
+                // Check if we should write our current database as a backup.
+                if(DateTime.Now - m_lastDatabaseBackup > new TimeSpan(0, 30, 0))
+                {
+                    m_historian.BackupCurrentDb(m_clipMine, this, c_databaseVersion);    
+                }
+            }          
         }
 
         // Needs to be called under lock!
