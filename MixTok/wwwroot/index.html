@@ -10,29 +10,20 @@
     </script>
     <script>
         let globalRequestId = 0;
-        let globalRefreshId = 0;
 
         var updatingStrings = [
             "Accessing the hive mind...",
             "Asking the mixer gods...",
             "Unearthing more clips...",
             "Accessing the clip matrix...",
-            "Asking Quinn to find more clips..."
+            "Asking Quinn to find more clips...",
+            "Waiting for Deeky...",
+            "Sacrificing to Borkbot...",
+            "Looking for bits...",
+            "Digging up results"
         ]
 
-        function RefreshResults()
-        {
-            // To prevent us from calling the API every time a letter is typed,
-            // set a delay and only make the request if nothing else comes in.
-            globalRefreshId++;
-            var localRefreshId = globalRefreshId;
-            setTimeout(function(){
-                if(globalRefreshId !== localRefreshId) return;
-                RefreshResultsDoIt();
-            }, 100);
-        }
-
-        function RefreshResultsDoIt() 
+        function RefreshResults() 
         {
             var urlArgs = "?";
             var sortType = 0;
@@ -177,6 +168,7 @@
                             $("#resultsPanel").append(
                             `
                             <div id="clipContainer" class="${i & 0 === 0 ? "darken" : "normal"}">
+                                <div id="clipPadding">
                                 <div id="clipThumbHolder"  onclick="playClip('${clip.clipUrl}')">
                                     <img id="clipThumb" src="${thumbUrl}" />
                                     <img id="clipThumPlayIcon" src="playIcon.png" />
@@ -190,6 +182,7 @@
                                     <strong>Created: </strong>${(new Date(clip.uploadDate)).toLocaleString()}<br />
                                     <strong>Share Link: </strong><a target="_blank" href="${clip.shareableUrl}">${clip.shareableUrl}</a><br />                                    
                                 </div>
+                            </div>
                             </div>
                             `
                         );
@@ -270,20 +263,49 @@
                 $("#partnered").val("any");
                 $("#hypezoneChannel").val("any");
                 RefreshResults();
-            });                 
+            }); 
+            
+            $("#hideMenu").click(function() {
+                $(".sidenav").hide()
+                $(".main").css(`margin-left`, "0px")
+                $(".showMenuHeader").show();
+            });
+
+            $("#showMenu").click(function() {
+                $(".sidenav").show()
+                $(".main").css(`margin-left`, "270px")
+                $(".showMenuHeader").hide();
+            });
 
             setInterval(UpdateStats, 2000); 
             
             RefreshResults(); 
-            UpdateStats();           
+            UpdateStats(); 
+
+            $(".showMenuHeader").hide();            
+            SetMenuToggleButton();
+            $(window).on('resize', function(){
+                SetMenuToggleButton();
+          });
         }); 
-        
+
+     
+        function SetMenuToggleButton()
+        {
+            $(window).width() < 900 ? $("#hideMenu").show() : $("#hideMenu").hide();
+        }
+       
         var currentHlsPlayer = null;
 
         function playClip(url)
         {
             // Show the popup
             $("#vidPopup")[0].classList.toggle("show");
+
+            // Set the width of the video to be the current with of the screen.
+            var width = $(window).width() * 0.9;
+            width = width > 850 ? 850 : width;
+            $("#popupVideo").width(width)
 
             // Get and stop any current videos
             var videoPlayer = $("#popupVideo")[0]
@@ -320,7 +342,7 @@
          /* The sidebar menu */
         .sidenav {
             height: 100%; /* Full-height: remove this if you want "auto" height */
-            width: 270px; /* Set the width of the sidebar */
+            width: 260px; /* Set the width of the sidebar */
             position: fixed; /* Fixed Sidebar (stay in place on scroll) */
             z-index: 1; /* Stay on top */
             top: 0; /* Stay at the top */
@@ -338,8 +360,9 @@
         /* Style page content */
         .main {
             margin-left: 270px; /* Same as the width of the sidebar */
-            width: 80%;
-            padding: 0px 10px;
+        }
+        #resultsPanel{
+            margin-left:0px;
         }
         #title {
             font-size: 28px;
@@ -364,18 +387,19 @@
         .darken {
             background-color: #caebf2
         }
-        #clipContainer {
-            height: 150px;
+        #clipContainer {            
             width: 100%;
+        }
+        #clipPadding {
+            padding:10px;
             display: flex;
-            padding: 10px;
-            margin-left:-10px;
         }
         #clipThumbHolder {
             position: relative;
             left: 0;
             top: 0;
             width: 17.5%;
+            cursor: pointer;
         }
         #clipThumb {
             max-width:100%;
@@ -387,30 +411,47 @@
         #clipThumPlayIcon {
             position: absolute; 
             height:40px;
-            top: 95px;
-            left: 8px;
+            top: 10px;
+            left: 0px;
         }
         #clipDetails {
             padding-left: 10px;
-            width: 50%;
+            width: 82.5%;
         }
-        #rightThing {
-            width: 25%;
-            background-color: yellow;
+        .showMenuHeader {
+            position: fixed;
+            width: 100%;
+            background-color: #efefef;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        /* Popup container - can be anything you want */
+        #showMenu {
+            margin: 5px;
+            width: 50%;            
+            height: 30px;
+        }
+        #hideMenu {
+            margin-top:10px;
+        }
+        body {
+            margin:0px;
+        }   
         
         /* The actual popup */
         .main .popupOverlay {
             visibility: hidden;
-            width: 900px;
+            max-width: 900px;
             background-color: rgba(85, 85, 85, 1.0);
             color: #fff;
             text-align: center;
             border-radius: 6px;
             padding: 8px 0;
+            padding-top: 20px;
             position: fixed;
             z-index: 1;
+            top: 50px;
             left: 0;
             right: 0;
             margin-left: auto;
@@ -419,7 +460,6 @@
 
         #popupVideo {
             width: 850px;
-            height:480px;
         }
 
         #popupVideoClose {
@@ -455,6 +495,7 @@
             <div id="stats">0 Clips - 0 Channels</div>
             <div id="statusText"></div>
             <div id="apiDocs"><a href="apidoc.html">API Docs</a></div>
+            <button type="button" id="hideMenu">Hide Menu</button>
             <div id="filterHeader">Sort</div>
             <select class="filter" id="sortType">
                 <option value="viewCount">View Count</option>
@@ -500,9 +541,12 @@
       
       <!-- Page content -->
       <div class="main">
+        <span class="showMenuHeader">
+            <input type="button" value="Show Menu" id="showMenu">
+        </span>
         <span class="popupOverlay" id="vidPopup">
             <video id="popupVideo" controls ></video>
-            <button type="button" id="popupVideoClose">- Close -</button>
+            <button type="button" id="popupVideoClose">Close</button>
         </span>
         <div id="resultsPanel"></div>
       </div> 
