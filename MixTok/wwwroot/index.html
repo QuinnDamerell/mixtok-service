@@ -218,6 +218,9 @@
                 // $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
                 // $("#lastUpdated").html(data.lastUpdate);
                 // $("#lastUpdateDuration").html(data.lastUpdateDuration);
+            })
+            .fail(function(data, textStatus, xhr) {
+                $("#statusText").html(`Lost connection, reconnecting...`);                
             });
         }
 

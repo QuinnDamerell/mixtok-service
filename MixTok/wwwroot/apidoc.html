@@ -1,49 +1,29 @@
 ﻿<html>
     <head>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-        <script>
-            function Update()
-            {
-                $.get(`/api/v1/stats`, function(data, status){
-                    $("#clipCount").html(data.indexedClips);
-                    $("#clipsLast24Hr").html(data.clipsCreatedInLastDay);
-                    $("#channelsWithClips").html(data.channelsWithClips);
-                    $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
-                    $("#lastUpdated").html(data.lastUpdate);
-                    $("#lastUpdateDuration").html(data.lastUpdateDuration);
-                });
-            }
-            setInterval(Update, 1000); 
-            Update();
-        </script>
     </head>
     <body>
         <h1>MixTok - ClipMine</h1>
-        <h3>Current Status:</h3>
-        <strong>Clips:</strong> <span id="clipCount"></span><br />
-        <strong>Clips Created in last 24hrs:</strong> <span id="clipsLast24Hr"></span><br />
-        <strong>Channels With Clips:</strong> <span id="channelsWithClips"></span><br />
-        <strong>Live Channels With Clips:</strong> <span id="liveChannelsWithClips"></span><br />
-        <strong>Last Updated:</strong> <span id="lastUpdated"></span> ago<br />
-        <strong>Last Update Duration:</strong> <span id="lastUpdateDuration"></span>
-        <h3>API: <a href="" api/v1/ClipMine"">api/v1/ClipMine</a></h3>
-        This API allows access to all clips currently on mixer. The caller can select any set of filters to apply to the returned results.
+        <h3><a href="index.html">Explorer</a></h3>
+        <h3>API: <a href="api/v1/ClipMine">api/v1/ClipMine</a></h3>
+        The ClipMine API allows access to all clips currently on mixer.
         <br />
         <br />
-        All filters can be applied as URL get parameters to the REST API.
-        <br />
-        Any subset of filters can be applied together.
-        <br />
-        All filers are optional.If any filter is excluded it will not be considered.
+        <li>All filters can be applied as URL get parameters to the REST API.</li>
+        <li>Any subset of filters can be applied together.</li>
+        <li>All filers are optional. If any filter is excluded it will not be considered.</li>
         <h3> Examples </h3>
-        View count sorted, only live channels, not partnered, clipped game matches ""fort""
-        <br /><a href="" api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort"">api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort</a>
+        View count sorted, only live channels, not partnered, clipped game matches "fort":
+        <br /><a href="api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort">api/v1/ClipMine?sortType=0&CurrentlyLive=true&Partnered=false&GameTitle=fort</a>
         <br />
         <br />
-        MixTok Rank Sorted, only live channels, no more than an hour old
-        <br /><a href="" api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h"">api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h</a>
-        <h3> Filters </h3>
-        <strong> SortType </strong> - int: [0, 1, 2](default 0) - The order in which results are sorted.
+        MixTok rank sorted, only live channels, no more than an hour old:
+        <br /><a href="api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h">api/v1/ClipMine?sortType=1&CurrentlyLive=true&FromTime=1h</a>
+        <br />
+        <br />
+        Most recent sorted, only english channels:
+        <br /><a href="api/v1/ClipMine?sortType=2&language=en">api/v1/ClipMine?sortType=2&language=en</a>
+        <h3> API Filters </h3>
+        <strong> SortType </strong> - int: [0, 1, 2](default 0) - The order in which results are sorted, always descending.
         <br /> 0 - ViewCount
         <br /> 1 - MixTokRank
         <br /> 2 - MostRecent
@@ -90,5 +70,12 @@
         <br />
         <strong> HypeZoneChannelId </strong> - int - Only returns clips that were taken on the given HypeZone channelId.
         <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        Created By Quinninator!
     </body>
 </html>
