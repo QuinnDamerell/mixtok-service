@@ -26,6 +26,7 @@ namespace MixTok.Core
 
             m_adder = adder;
             m_updater = new Thread(UpdateThread);
+            m_updater.Priority = ThreadPriority.BelowNormal;
             m_updater.Start();
         }
 

@@ -150,11 +150,11 @@ namespace MixTok.Core
                 // To update the list, delete everything we had and rebuild it
                 // based on the new mine.
                 m_viewCountSortedList.Clear();
-                foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
+                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
                 {
                     InsertSort(ref m_viewCountSortedList, p.Value, ClipMineSortTypes.ViewCount);
                 }
-            }    
+            }
 
             // Update the mixtok rank sorted list.
             lock (m_mixTockSortedList)
@@ -246,7 +246,8 @@ namespace MixTok.Core
                 LinkedListNode<MixerClip> node = list.First;
                 while(output.Count < limit && node != null)
                 {
-                    bool addToOutput = true;
+                    // Get the node and advance here, becasue this will continue early
+                    // if the search filters it out.
                     MixerClip c = node.Value;
                     node = node.Next;
 
@@ -255,82 +256,87 @@ namespace MixTok.Core
                         // Check if this is the channel we want.
                         if (c.Channel.Id != channelIdFilter.Value)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && !String.IsNullOrWhiteSpace(channelName))
+                    if(!String.IsNullOrWhiteSpace(channelName))
                     {
                         // Check if the channel name has the current filter.
                         if(c.Channel.Name.IndexOf(channelName, 0, StringComparison.InvariantCultureIgnoreCase) == -1)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && !String.IsNullOrWhiteSpace(gameTitle))
+                    if(!String.IsNullOrWhiteSpace(gameTitle))
                     {
                         // Check if the game title has the current filter string.
                         if(c.GameTitle.IndexOf(gameTitle, 0, StringComparison.InvariantCultureIgnoreCase) == -1)
                         {
-                            addToOutput = false;
+                            continue;
+                        } 
+                    }
+                    if(gameId.HasValue)
+                    {
+                        if(c.TypeId != gameId)
+                        {
+                            continue;
                         }
                     }
-                    if(addToOutput && fromTime.HasValue)
+                    if(fromTime.HasValue)
                     {
                         // Check if this is in the time range we want.
                         if(c.UploadDate < fromTime.Value)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if (addToOutput && toTime.HasValue)
+                    if (toTime.HasValue)
                     {
                         // Check if this is in the time range we want.
                         if (c.UploadDate > toTime.Value)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && ViewCountMin.HasValue)
+                    if(ViewCountMin.HasValue)
                     {
                         if(c.ViewCount < ViewCountMin)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && partnered.HasValue)
+                    if(partnered.HasValue)
                     {
                         if(partnered.Value != c.Channel.Partnered)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && currentlyLive.HasValue)
+                    if(currentlyLive.HasValue)
                     {
                         if(currentlyLive.Value != c.Channel.Online)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && hypeZoneChannelId.HasValue)
+                    if(hypeZoneChannelId.HasValue)
                     {
                         if(hypeZoneChannelId.Value != c.HypeZoneChannelId)
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
-                    if(addToOutput && !String.IsNullOrWhiteSpace(languageFilter))
+                    if(!String.IsNullOrWhiteSpace(languageFilter))
                     {
                         if(!c.Channel.Language.Equals(languageFilter, StringComparison.OrdinalIgnoreCase))
                         {
-                            addToOutput = false;
+                            continue;
                         }
                     }
 
-                    // Add if if we want.
-                    if (addToOutput)
-                    {
-                        output.Add(c);
-                    }
+                    // If we got to then end this didn't get filtered.
+                    // So add it.
+                    output.Add(c);                    
                 }
             }
             return output;

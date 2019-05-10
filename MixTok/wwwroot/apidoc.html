@@ -3,7 +3,7 @@
     </head>
     <body>
         <h1>MixTok - ClipMine</h1>
-        <h3><a href="index.html">Explorer</a></h3>
+        <h3><a href="/">Data Explorer</a></h3>
         <h3>API: <a href="api/v1/ClipMine">api/v1/ClipMine</a></h3>
         The ClipMine API allows access to all clips currently on mixer.
         <br />
@@ -23,13 +23,13 @@
         Most recent sorted, only english channels:
         <br /><a href="api/v1/ClipMine?sortType=2&language=en">api/v1/ClipMine?sortType=2&language=en</a>
         <h3> API Filters </h3>
-        <strong> SortType </strong> - int: [0, 1, 2](default 0) - The order in which results are sorted, always descending.
+        <strong> SortType </strong> - int: [0, 1, 2] (default 0) - The order in which results are sorted, always descending.
         <br /> 0 - ViewCount
         <br /> 1 - MixTokRank
         <br /> 2 - MostRecent
         <br />
         <br />
-        <strong> Limit </strong> - int(default 100) - The max number of results to be sent back.
+        <strong> Limit </strong> - int (default 50) - The max number of results to be sent back.
         <br />
         <br />
         <strong> FromTime </strong> - string - No clips older than this time will be returned.

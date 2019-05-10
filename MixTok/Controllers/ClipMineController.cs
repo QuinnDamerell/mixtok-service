@@ -19,9 +19,8 @@ namespace MixTok.Controllers
         {
             DateTime start = DateTime.Now;
 
-            // Setup the limit and page values.
-            int l = limit.HasValue ? limit.Value : 100;
-            l = Math.Clamp(l, 0, 1000);
+            // Setup the limit values
+            int l = limit.HasValue ? limit.Value : 50;
 
             // If we get time ranges, parse them.
             DateTime? from = null;
@@ -62,7 +61,7 @@ namespace MixTok.Controllers
 
             // Get the results.
             var list = Program.s_ClipMine.GetClips(sort, l, from, to, ViewCountMin, channelId, channelName, hypeZoneChannelId, isLive, partnered, gameTitle, gameId, language);
-            Logger.Info($"ClipMine call took {DateTime.Now - start}");
+            Logger.Info($"ClipMine call took {(DateTime.Now - start).TotalMilliseconds}ms");
             return Ok(list);
         }  
         
