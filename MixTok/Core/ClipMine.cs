@@ -26,6 +26,7 @@ namespace MixTok.Core
 
         Historian m_historian;
         ClipCrawler m_crawler;
+        ReaderWriterLockSlim m_clipMineLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         Dictionary<string, MixerClip> m_clipMine = new Dictionary<string, MixerClip>();
         object m_viewCountSortedLock = new object(); // We use these lock objects since we swap the list obejcts.
         object m_mixTockSortedLock = new object();
@@ -61,29 +62,40 @@ namespace MixTok.Core
         public void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration, bool isRestore)
         {
             DateTime start = DateTime.Now;
-
-            // Lock the dictionary so we make sure no one reads or writes while we are updating.
-            lock(m_clipMine)
+                      
             {
+                // Lock the dictionary for writing so we make sure no one reads or writes while we are updating.
+                m_clipMineLock.EnterWriteLock();
+
                 // Set all channels to offline and remove old clips.
                 OfflineAndCleanUpClipMine();
 
                 // Add all of the new clips.
                 AddOrUpdateClips(newClips);
 
+                m_clipMineLock.ExitWriteLock();
+            }
+
+            {
+                // The cooking operations are all ready-only, so use the read only lock.
+                m_clipMineLock.EnterReadLock();
+
                 // Update
                 UpdateCookedData();
 
-                m_lastUpdateTime = DateTime.Now;
-                m_lastUpdateDuration = (m_lastUpdateTime - start) + updateDuration;
+                m_clipMineLock.ExitReadLock();
+            }
 
-                // Check if we should write our current database as a backup.
-                if(!isRestore && DateTime.Now - m_lastDatabaseBackup > new TimeSpan(0, 30, 0))
-                {
-                    m_historian.BackupCurrentDb(m_clipMine, this, c_databaseVersion);
-                    m_lastDatabaseBackup = DateTime.Now;
-                }
-            }          
+            m_lastUpdateTime = DateTime.Now;
+            m_lastUpdateDuration = (m_lastUpdateTime - start) + updateDuration;
+
+            // Check if we should write our current database as a backup.
+            if(!isRestore && DateTime.Now - m_lastDatabaseBackup > new TimeSpan(0, 30, 0))
+            {
+                m_historian.BackupCurrentDb(m_clipMine, this, c_databaseVersion);
+                m_lastDatabaseBackup = DateTime.Now;
+            }
+                   
         }
 
         // Needs to be called under lock!
@@ -142,12 +154,14 @@ namespace MixTok.Core
         private void UpdateCookedData()
         {
             DateTime start = DateTime.Now;
-            SetStatus($"Cooking data...");
+            SetStatus($"Updating MixTok ranks...");
 
             // Update the mixtock rank on all the clips we know of.
             // We do this for all clips since it effects offline channels.
             UpdateMixTokRanks();
 
+            SetStatus($"Cooking view count data...");
+            
             // Update the view count sorted list.
             // First build a temp list outside of lock and then swap them.
             LinkedList<MixerClip> tempList = new LinkedList<MixerClip>();
@@ -161,6 +175,8 @@ namespace MixTok.Core
                 m_viewCountSortedList = tempList;
             }
 
+            SetStatus($"Cooking MixTok rank data...");
+
             // Update the mixtok sorted list.
             tempList = new LinkedList<MixerClip>();
             foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
@@ -172,6 +188,8 @@ namespace MixTok.Core
             {
                 m_mixTockSortedList = tempList;
             }
+
+            SetStatus($"Cooking most recent data...");
 
             // Update the most recent list.
             tempList = new LinkedList<MixerClip>();
@@ -382,51 +400,59 @@ namespace MixTok.Core
 
         public int GetClipsCount()
         {
-            lock(m_clipMine)
+            int result = 0;
+            if(m_clipMineLock.TryEnterReadLock(5))
             {
-                return m_clipMine.Count;
+                result = m_clipMine.Count;
+                m_clipMineLock.ExitReadLock();
             }
+            return result;
         }
 
         public Tuple<int, int> GetChannelCount()
         {
-            lock(m_clipMine)
+            Tuple<int, int> result = new Tuple<int, int>(0,0);
+            if (m_clipMineLock.TryEnterReadLock(5))
             {
                 Dictionary<int, bool> channelMap = new Dictionary<int, bool>();
-                foreach(KeyValuePair<string, MixerClip> p in m_clipMine)
+                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
                 {
-                    if(!channelMap.ContainsKey(p.Value.Channel.Id))
+                    if (!channelMap.ContainsKey(p.Value.Channel.Id))
                     {
                         channelMap.Add(p.Value.Channel.Id, p.Value.Channel.Online);
                     }
                 }
                 int online = 0;
-                foreach(KeyValuePair<int, bool> p in channelMap)
+                foreach (KeyValuePair<int, bool> p in channelMap)
                 {
-                    if(p.Value)
+                    if (p.Value)
                     {
                         online++;
                     }
                 }
-                return new Tuple<int, int>(channelMap.Count, online);
+                result = new Tuple<int, int>(channelMap.Count, online);
+
+                m_clipMineLock.ExitReadLock();
             }
+            return result;
         }
 
         public int ClipsCreatedInLastTime(TimeSpan ts)
         {
-            lock (m_clipMine)
+            int result = 0;
+            if (m_clipMineLock.TryEnterReadLock(5))
             {
-                int count = 0;
                 DateTime now = DateTime.UtcNow;
                 foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
                 {
-                    if(now - p.Value.UploadDate < ts)
+                    if (now - p.Value.UploadDate < ts)
                     {
-                        count++;
+                        result++;
                     }
                 }
-                return count;
+                m_clipMineLock.ExitReadLock();
             }
+            return result;   
         }
 
         public DateTime GetLastUpdateTime()
