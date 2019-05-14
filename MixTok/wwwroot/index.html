@@ -10,6 +10,7 @@
     </script>
     <script>
         let globalRequestId = 0;
+        let globalRefreshId = 0;
 
         var updatingStrings = [
             "Accessing the hive mind...",
@@ -23,7 +24,21 @@
             "Digging up results..."
         ]
 
-        function RefreshResults() 
+        function RefreshResults() {
+            // Add a 100ms delay before making the query call to 
+            // make sure that quick typers don't spam to many queries.
+            globalRefreshId++;
+            let refreshId = globalRefreshId;
+            setTimeout(() => {
+                if (globalRefreshId !== refreshId)
+                {
+                    return;
+                }
+                RefreshResultsDoWork();
+            }, 100)
+        }
+
+        function RefreshResultsDoWork() 
         {
             var urlArgs = "?";
             var sortType = 0;

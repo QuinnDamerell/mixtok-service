@@ -34,7 +34,6 @@ namespace MixTok.Core
         {
             while(true)
             {
-                bool updateFailed = false;
                 try
                 {
                     // Update
@@ -42,13 +41,11 @@ namespace MixTok.Core
                     List<MixerClip> clips = await GetTockClips();
 
                     m_adder.AddToClipMine(clips, DateTime.Now - start, false);
-                    updateFailed = false;
                 }
                 catch(Exception e)
                 {
-                    Program.s_ClipMine.SetStatus($"<strong>Failed to update clips!</strong> "+e.Message + "; stack: "+e.StackTrace);
+                    Program.s_ClipMine.SetStatus($"<strong>Failed to update clips!</strong> "+e.Message + "; stack: "+e.StackTrace, new TimeSpan(0, 0, 30));
                     Logger.Error($"Failed to update!", e);
-                    updateFailed = true;
                 }
 
                 // After we successfully get clips,
@@ -56,22 +53,9 @@ namespace MixTok.Core
                 DateTime nextUpdate = DateTime.Now.AddMinutes(5);
                 while(nextUpdate > DateTime.Now)
                 {
-                    string str = "Next update in ";
-                    TimeSpan diff = nextUpdate - DateTime.Now;
-                    if(diff.TotalMinutes > 0)
-                    {
-                        str += $"{Math.Round(diff.TotalMinutes, 2)} mins";
-                    }
-                    else
-                    {
-                        str += $"{Math.Round(diff.TotalSeconds, 2)} secs";
-                    }
                     // Don't set the text if we are showing an error.
-                    if (!updateFailed)
-                    {
-                        Program.s_ClipMine.SetStatus(str);
-                    }
-                    Thread.Sleep(5000);
+                    Program.s_ClipMine.SetStatus($"Next update in {Util.FormatTime(nextUpdate - DateTime.Now)}");
+                    Thread.Sleep(500);
                 }
             }
         }
