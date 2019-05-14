@@ -27,6 +27,9 @@ namespace MixTok.Core
         Historian m_historian;
         ClipCrawler m_crawler;
         Dictionary<string, MixerClip> m_clipMine = new Dictionary<string, MixerClip>();
+        object m_viewCountSortedLock = new object(); // We use these lock objects since we swap the list obejcts.
+        object m_mixTockSortedLock = new object();
+        object m_mostRecentSortedLock = new object();
         LinkedList<MixerClip> m_viewCountSortedList = new LinkedList<MixerClip>();
         LinkedList<MixerClip> m_mixTockSortedList = new LinkedList<MixerClip>();
         LinkedList<MixerClip> m_mostRecentList = new LinkedList<MixerClip>();
@@ -139,46 +142,48 @@ namespace MixTok.Core
         private void UpdateCookedData()
         {
             DateTime start = DateTime.Now;
+            SetStatus($"Cooking data...");
 
             // Update the mixtock rank on all the clips we know of.
             // We do this for all clips since it effects offline channels.
             UpdateMixTokRanks();
 
             // Update the view count sorted list.
-            lock (m_viewCountSortedList)
+            // First build a temp list outside of lock and then swap them.
+            LinkedList<MixerClip> tempList = new LinkedList<MixerClip>();
+            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
             {
-                // To update the list, delete everything we had and rebuild it
-                // based on the new mine.
-                m_viewCountSortedList.Clear();
-                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
-                {
-                    InsertSort(ref m_viewCountSortedList, p.Value, ClipMineSortTypes.ViewCount);
-                }
+                InsertSort(ref tempList, p.Value, ClipMineSortTypes.ViewCount);
+            }
+            // Now swap the lists, use the object lock.
+            lock(m_viewCountSortedLock)
+            {
+                m_viewCountSortedList = tempList;
             }
 
-            // Update the mixtok rank sorted list.
-            lock (m_mixTockSortedList)
+            // Update the mixtok sorted list.
+            tempList = new LinkedList<MixerClip>();
+            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
             {
-                // To update the list, delete everything we had and rebuild it
-                // based on the new mine.
-                m_mixTockSortedList.Clear();
-                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
-                {
-                    InsertSort(ref m_mixTockSortedList, p.Value, ClipMineSortTypes.MixTokRank);
-                }
+                InsertSort(ref tempList, p.Value, ClipMineSortTypes.MixTokRank);
+            }
+            // Now swap the lists, use the object lock.
+            lock (m_mixTockSortedLock)
+            {
+                m_mixTockSortedList = tempList;
             }
 
-            // Update the mixtok rank sorted list.
-            lock (m_mostRecentList)
+            // Update the most recent list.
+            tempList = new LinkedList<MixerClip>();
+            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
             {
-                // To update the list, delete everything we had and rebuild it
-                // based on the new mine.
-                m_mostRecentList.Clear();
-                foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
-                {
-                    InsertSort(ref m_mostRecentList, p.Value, ClipMineSortTypes.MostRecent);
-                }
-            }            
+                InsertSort(ref tempList, p.Value, ClipMineSortTypes.MostRecent);
+            }
+            // Now swap the lists, use the object lock.
+            lock (m_mostRecentSortedLock)
+            {
+                m_mostRecentList = tempList;
+            }        
 
             Logger.Info($"Cooking data done: {DateTime.Now - start}");
         }
@@ -223,23 +228,27 @@ namespace MixTok.Core
         {
             // Get the pre-sorted list we want.
             LinkedList<MixerClip> list;
+            object lockObj;
             switch(sortType)
             {
                 default:
                 case ClipMineSortTypes.ViewCount:
                     list = m_viewCountSortedList;
+                    lockObj = m_viewCountSortedLock;
                     break;
                 case ClipMineSortTypes.MixTokRank:
                     list = m_mixTockSortedList;
+                    lockObj = m_mixTockSortedLock;
                     break;
                 case ClipMineSortTypes.MostRecent:
                     list = m_mostRecentList;
+                    lockObj = m_mostRecentSortedLock;
                     break;
             }
 
             List<MixerClip> output = new List<MixerClip>();
             // Lock the list so it doesn't change while we are using it.
-            lock(list)
+            lock(lockObj)
             {
                 // Go through the current sorted list from the highest to the lowest.
                 // Apply the filtering and then build the output list.
@@ -365,7 +374,7 @@ namespace MixTok.Core
                 {
                     age = s_minClipAge;
                 }
-                double decayedRank = viewRank / (age.TotalDays * 2);
+                double decayedRank = viewRank / (Math.Pow(age.TotalDays, 1.5));
 
                 clip.MixTokRank = decayedRank;
             }
