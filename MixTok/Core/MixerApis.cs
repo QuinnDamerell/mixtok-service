@@ -115,7 +115,7 @@ namespace MixTok.Core
             {
                 try
                 {
-                    string response = await MakeMixerHttpRequest($"api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent,online,userId,user,languageId,vodsEnabled");
+                    string response = await MakeMixerHttpRequest($"api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent,online,userId,user,languageId,vodsEnabled,partnered");
                     List<MixerChannel> chan = JsonConvert.DeserializeObject<List<MixerChannel>>(response);
                     channels.AddRange(chan);
 

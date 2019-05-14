@@ -35,8 +35,8 @@ namespace MixTok.Controllers
             }
             if (!String.IsNullOrWhiteSpace(toTime))
             {
-                from = ParseTime(toTime);
-                if (from == null)
+                to = ParseTime(toTime);
+                if (to == null)
                 {
                     return BadRequest("Invalid time format. We accept unix time, anything C# DateTime can parse, or formats like `1d`, `5h`, etc.");
                 }
@@ -125,6 +125,8 @@ namespace MixTok.Controllers
                         return now.AddHours(-value);
                     case 'd':
                         return now.AddDays(-value);
+                    case 'w':
+                        return now.AddDays(-(value*7));
                     case 'y':
                         return now.AddYears(-value);
                     default:

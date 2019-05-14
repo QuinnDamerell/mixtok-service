@@ -135,7 +135,7 @@
                 if(globalRequestId !== localRequestId) return;
 
                 // Show some text to say we are updating.
-                $("#resultsPanel").html(""+updatingStrings[Math.floor(Math.random() * updatingStrings.length)]);
+                SetErrorResult(""+updatingStrings[Math.floor(Math.random() * updatingStrings.length)]);
             }, 500);
 
             $.get(`/api/v1/ClipMine${urlArgs}`, 
@@ -148,7 +148,7 @@
                     $("#resultsPanel").html("");
                     if(data.length === 0)
                     {
-                        $("#resultsPanel").html("No Results!");
+                        SetErrorResult(`No Results!`);
                     }
                     else
                     {                        
@@ -197,8 +197,13 @@
                 if(globalRequestId !== localRequestId) return;
 
                 // Report the error.
-                $("#resultsPanel").html(`<strong>${xhr}</strong><br/>${data.responseText}`);
+                SetErrorResult(`<strong>${xhr}</strong><br/>${data.responseText}`);
             });       
+        }
+
+        function SetErrorResult(str)
+        {
+            $("#resultsPanel").html(`<div id="errorText">${str}</div>`);
         }
 
         function UpdateStats()
@@ -364,6 +369,9 @@
         #resultsPanel{
             margin-left:0px;
         }
+        #errorText {
+            padding:10px;
+        }
         #title {
             font-size: 28px;
         }
@@ -518,7 +526,7 @@
             <select class="filter" id="isLive">
                 <option value="any">Any</option>
                 <option value="live">Live</option>
-                <option value="notLive">Not Live</option>
+                <option value="notLive">Offline</option>
             </select> 
             <div id="filterHeader">Partnered</div>
             <select class="filter" id="partnered">
