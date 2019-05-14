@@ -38,6 +38,8 @@ namespace MixTok.Core
         TimeSpan m_lastUpdateDuration = new TimeSpan(0);
         DateTime m_lastDatabaseBackup = DateTime.MinValue;
         string m_status;
+        TimeSpan m_statusDuration = new TimeSpan(0);
+        DateTime m_statusDurationSet = DateTime.MinValue;
 
         public ClipMine()
         {
@@ -62,7 +64,9 @@ namespace MixTok.Core
         public void AddToClipMine(List<MixerClip> newClips, TimeSpan updateDuration, bool isRestore)
         {
             DateTime start = DateTime.Now;
-                      
+
+            SetStatus($"Indexing {newClips.Count} new clips...");
+
             {
                 // Lock the dictionary for writing so we make sure no one reads or writes while we are updating.
                 m_clipMineLock.EnterWriteLock();
@@ -160,50 +164,50 @@ namespace MixTok.Core
             // We do this for all clips since it effects offline channels.
             UpdateMixTokRanks();
 
-            SetStatus($"Cooking view count data...");
-            
             // Update the view count sorted list.
             // First build a temp list outside of lock and then swap them.
-            LinkedList<MixerClip> tempList = new LinkedList<MixerClip>();
-            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
+            LinkedList<MixerClip> temp = BuildList(m_clipMine, ClipMineSortTypes.ViewCount, "view count");
+            lock (m_viewCountSortedLock)
             {
-                InsertSort(ref tempList, p.Value, ClipMineSortTypes.ViewCount);
+                m_viewCountSortedList = temp;
             }
-            // Now swap the lists, use the object lock.
-            lock(m_viewCountSortedLock)
-            {
-                m_viewCountSortedList = tempList;
-            }
-
-            SetStatus($"Cooking MixTok rank data...");
 
             // Update the mixtok sorted list.
-            tempList = new LinkedList<MixerClip>();
-            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
-            {
-                InsertSort(ref tempList, p.Value, ClipMineSortTypes.MixTokRank);
-            }
-            // Now swap the lists, use the object lock.
+            temp = BuildList(m_clipMine, ClipMineSortTypes.MixTokRank, "Mixtok rank");
             lock (m_mixTockSortedLock)
             {
-                m_mixTockSortedList = tempList;
+                m_mixTockSortedList = temp;
             }
-
-            SetStatus($"Cooking most recent data...");
-
+            
             // Update the most recent list.
-            tempList = new LinkedList<MixerClip>();
-            foreach (KeyValuePair<string, MixerClip> p in m_clipMine)
-            {
-                InsertSort(ref tempList, p.Value, ClipMineSortTypes.MostRecent);
-            }
-            // Now swap the lists, use the object lock.
+            temp = BuildList(m_clipMine, ClipMineSortTypes.MostRecent, "most recent");
             lock (m_mostRecentSortedLock)
             {
-                m_mostRecentList = tempList;
-            }        
+                m_mostRecentList = temp;
+            }
 
+            SetStatus($"Cooking data done:  {Util.FormatTime(DateTime.Now - start)}", new TimeSpan(0, 0, 10));
             Logger.Info($"Cooking data done: {DateTime.Now - start}");
+        }
+
+        private LinkedList<MixerClip> BuildList(Dictionary<string, MixerClip> db, ClipMineSortTypes type, string indexType)
+        {
+            int count = 0;
+            LinkedList<MixerClip> tempList = new LinkedList<MixerClip>();
+            foreach (KeyValuePair<string, MixerClip> p in db)
+            {
+                InsertSort(ref tempList, p.Value, type);
+
+                // Do to issues with API perf while we are sorting, we need to manually yield the thread to 
+                // give the APIs time to process.
+                count++;
+                if (count % 1000 == 0)
+                {
+                    SetStatus($"Cooking {indexType} [{String.Format("{0:n0}", count)}/{String.Format("{0:n0}", db.Count)}]...");
+                    Thread.Sleep(5);
+                }
+            }
+            return tempList;
         }
 
         private void InsertSort(ref LinkedList<MixerClip> list, MixerClip c, ClipMineSortTypes type)
@@ -470,9 +474,25 @@ namespace MixTok.Core
             return m_lastDatabaseBackup;
         }
 
-        public void SetStatus(string str)
+        public void SetStatus(string str, TimeSpan? duration = null)
         {
+            // Check if we have a lingering message
+            if(!duration.HasValue)
+            {
+                if((DateTime.Now - m_statusDurationSet) < m_statusDuration)
+                {
+                    return;
+                }
+            }
+
             m_status = str;
+
+            // Set the new duration if not.
+            if(duration.HasValue)
+            {
+                m_statusDurationSet = DateTime.Now;
+                m_statusDuration = duration.Value;
+            }
         }
 
         public string GetStatus()

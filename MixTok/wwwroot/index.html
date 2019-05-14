@@ -13,14 +13,14 @@
 
         var updatingStrings = [
             "Accessing the hive mind...",
-            "Asking the mixer gods...",
+            "Asking the Mixer gods...",
             "Unearthing more clips...",
             "Accessing the clip matrix...",
             "Asking Quinn to find more clips...",
             "Waiting for Deeky...",
             "Sacrificing to Borkbot...",
             "Looking for bits...",
-            "Digging up results"
+            "Digging up results..."
         ]
 
         function RefreshResults() 
@@ -208,14 +208,17 @@
 
         function UpdateStats()
         {
-            $.get(`/api/v1/stats`, function(data, status){
-                $("#stats").html(`<strong>${Number(data.indexedClips).toLocaleString('en')} Clips Indexed</strong> - ${Number(data.channelsWithClips).toLocaleString('en')} Channels`);
-                $("#statusText").html(`${data.currentStatus}`);
-                // $("#clipsLast24Hr").html(data.clipsCreatedInLastDay);
-                // $("#channelsWithClips").html(data.channelsWithClips);
-                // $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
-                // $("#lastUpdated").html(data.lastUpdate);
-                // $("#lastUpdateDuration").html(data.lastUpdateDuration);
+            $.get({
+                url: `/api/v1/stats`,
+                success: function (data, status) {
+                    $("#stats").html(`<strong>${Number(data.indexedClips).toLocaleString('en')} Clips Indexed</strong>; ${Number(data.channelsWithClips).toLocaleString('en')} Channels`);
+                    $("#statusText").html(`${data.currentStatus}`);
+                    // $("#clipsLast24Hr").html(data.clipsCreatedInLastDay);
+                    // $("#channelsWithClips").html(data.channelsWithClips);
+                    // $("#liveChannelsWithClips").html(data.liveChannelsWithClips);
+                    // $("#lastUpdated").html(data.lastUpdate);
+                    // $("#lastUpdateDuration").html(data.lastUpdateDuration);
+                }
             })
             .fail(function(data, textStatus, xhr) {
                 $("#statusText").html(`Lost connection, reconnecting...`);                
@@ -499,7 +502,7 @@
     <body>
          <!-- Side navigation -->
         <div class="sidenav">
-            <div id="title">MixTok - ClipMine!</div>
+            <div id="title">MixTok - ClipMine</div>
             <div id="stats">0 Clips - 0 Channels</div>
             <div id="statusText"></div>
             <div id="apiDocs"><a href="apidoc.html">API Docs</a></div>

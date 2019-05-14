@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MixTok.Core;
 
 namespace MixTok.Controllers
 {
@@ -33,25 +34,12 @@ namespace MixTok.Controllers
                 ChannelsWithClips = chan.Item1,
                 LiveChannelsWithClips = chan.Item2,
                 IndexedClips = Program.s_ClipMine.GetClipsCount(),
-                LastUpdate = FormatTime(DateTime.Now - Program.s_ClipMine.GetLastUpdateTime()),
-                LastUpdateDuration = FormatTime(Program.s_ClipMine.GetLastUpdateDuration()),
-                LastBackup = FormatTime(DateTime.Now - Program.s_ClipMine.GetLastBackupTime()),
+                LastUpdate = Util.FormatTime(DateTime.Now - Program.s_ClipMine.GetLastUpdateTime()),
+                LastUpdateDuration = Util.FormatTime(Program.s_ClipMine.GetLastUpdateDuration()),
+                LastBackup = Util.FormatTime(DateTime.Now - Program.s_ClipMine.GetLastBackupTime()),
                 ClipsCreatedInLastDay = Program.s_ClipMine.ClipsCreatedInLastTime(new TimeSpan(24, 0, 0)),
                 CurrentStatus = Program.s_ClipMine.GetStatus()
             };
-        }
-
-        private string FormatTime(TimeSpan s)
-        {
-            if (s.TotalSeconds <= 60)
-            {
-                return $"{Math.Round(s.TotalSeconds, 2)} seconds";
-            }
-            if (s.TotalMinutes <= 60)
-            {
-                return $"{Math.Round(s.TotalMinutes, 2)} minutes";
-            }
-            return $"{Math.Round(s.TotalHours, 2)} hours";
         }
     }
 }

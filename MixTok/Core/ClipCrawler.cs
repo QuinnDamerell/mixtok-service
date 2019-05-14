@@ -41,7 +41,6 @@ namespace MixTok.Core
                     DateTime start = DateTime.Now;
                     List<MixerClip> clips = await GetTockClips();
 
-                    Program.s_ClipMine.SetStatus($"Indexing {clips.Count} new clips...");
                     m_adder.AddToClipMine(clips, DateTime.Now - start, false);
                     updateFailed = false;
                 }
@@ -86,8 +85,8 @@ namespace MixTok.Core
 
             // We must limit how many channels we pull, so we will only get channels with at least 2 viewers.
             List<MixerChannel> channels = await MixerApis.GetOnlineChannels(MinViewerCount, null);
-            Logger.Info($"Found {channels.Count} online channels in {(DateTime.Now - start)}");
-            Program.s_ClipMine.SetStatus($"Getting clip data 0/{channels.Count}...");
+            Logger.Info($"Found {channels.Count} online channels in {Util.FormatTime(DateTime.Now - start)}");
+            Program.s_ClipMine.SetStatus($"Found {Util.FormatInt(channels.Count)} online channels in {Util.FormatTime(DateTime.Now - start)}", new TimeSpan(0, 0, 10));
 
             // Get the clips for the channels
             List<MixerClip> clips = new List<MixerClip>();
@@ -115,14 +114,16 @@ namespace MixTok.Core
                 }
                 
                 count++;
-                if(count % 10 == 0)
+                if(count % 5 == 0)
                 {
-                    Logger.Info($"Got {count}/{channels.Count} channel clips...");
-                    Program.s_ClipMine.SetStatus($"Getting clip data {count}/{channels.Count}...");                    
+                    //Logger.Info($"Got {count}/{channels.Count} channel clips...");
+                    Program.s_ClipMine.SetStatus($"Getting clip data [{Util.FormatInt(count)}/{Util.FormatInt(channels.Count)}]...");                    
                 }
             }
 
             Logger.Info($"Found {count} clips in {(DateTime.Now - start)}");
+            Program.s_ClipMine.SetStatus($"Found {Util.FormatInt(count)} clips in {Util.FormatTime(DateTime.Now - start)}", new TimeSpan(0, 0, 10));
+
             return clips;
         }
     }
